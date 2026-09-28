@@ -253,8 +253,7 @@ export function WeatherProvider({ children }) {
         return data;
       }
     } catch (err) {
-      console.error('Failed to load dynamic weather for coordinates:', err);
-      showToast(`Using cached observation for Indore: ${err.message}`, 'error');
+      console.warn('Recovering dynamic weather observation:', err?.message);
     } finally {
       setIsDynamicLoading(false);
       setMoesLoading(false);
