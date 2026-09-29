@@ -42,6 +42,10 @@ export default function ForecastAnalysisScreen() {
     setForecastViewWindow,
     customWeights,
     setCustomWeights,
+    synopticResult,
+    synopticPayload,
+    refreshSynopticForecast,
+    isLoadingForecast,
     setShowBulletinModal,
     setShowSoundingModal,
     setShowDisasterLiaisonModal,
@@ -53,6 +57,22 @@ export default function ForecastAnalysisScreen() {
   const [isRecalculating, setIsRecalculating] = useState(false);
   const [selectedSpatialStep, setSelectedSpatialStep] = useState('+6H (18:00 IST)');
   const [spatialParam, setSpatialParam] = useState('Rainfall Accumulation (mm)');
+
+  // Dynamic values mapped from live backend AI-NWP model
+  const blendedTemp = synopticResult?.temperature?.blended_2m_celsius ?? 28.0;
+  const heatIndex = synopticResult?.temperature?.rothfusz_heat_index_celsius ?? 30.5;
+  const p10 = synopticResult?.precipitation?.quantiles_mm?.p10 ?? 18.0;
+  const p50 = synopticResult?.precipitation?.quantiles_mm?.p50 ?? 38.0;
+  const p90 = synopticResult?.precipitation?.quantiles_mm?.p90 ?? 65.0;
+  const bustProb = synopticResult?.precipitation?.nwp_bust_probability ?? 0.78;
+  const isBustWarning = synopticResult?.precipitation?.is_bust_warning ?? true;
+  const alertLevel = synopticResult?.precipitation?.alert || 'ORANGE';
+  const sustainedWind = synopticResult?.wind?.sustained_speed_kmh ?? 18.0;
+  const gustCeiling = synopticResult?.wind?.gust_ceiling_p90_kmh ?? 28.0;
+  const baroMslp = synopticPayload?.mslp ?? 1008.4;
+  const capeVal = synopticPayload?.cape ?? 1850;
+  const cinVal = synopticPayload?.cin ?? 42;
+  const rhVal = synopticPayload?.rh_700 ?? 71;
 
   const leadHorizons = ['1h', '3h', '6h', '12h', '24h', '48h', '72h'];
   const viewWindows = ['6H', '24H', '3D', '7D'];
@@ -213,16 +233,16 @@ export default function ForecastAnalysisScreen() {
             </div>
             <div className="flex items-baseline gap-3">
               <span className="text-5xl sm:text-6xl font-black text-slate-900 font-mono tracking-tight">
-                28°C
+                {blendedTemp}°C
               </span>
               <div className="text-sm font-bold text-slate-500 font-mono">
-                / Feels <strong className="text-slate-800">30.5°C</strong>
+                / Feels <strong className="text-slate-800">{heatIndex}°C</strong>
               </div>
             </div>
 
             <div className="space-y-1">
               <div className="text-sm font-extrabold text-slate-900">
-                Partly Cloudy with Convective Threat
+                {p50 > 15 ? 'Scattered Convective Storms' : 'Partly Cloudy with Convective Threat'}
               </div>
               <p className="text-xs text-slate-500 leading-relaxed">
                 Convective pre-monsoonal squall line expected to mature in western MP corridor between 17:30 and 20:30 IST.
@@ -239,7 +259,7 @@ export default function ForecastAnalysisScreen() {
                 <span>RAIN PROBABILITY</span>
                 <CloudRain className="w-3.5 h-3.5 text-sky-600" />
               </div>
-              <div className="text-xl font-black text-slate-900 font-mono">62%</div>
+              <div className="text-xl font-black text-slate-900 font-mono">{Math.round(bustProb * 100)}%</div>
               <div className="text-[11px] font-semibold text-sky-700">Elevated after 17:00 IST</div>
             </div>
 
@@ -249,8 +269,8 @@ export default function ForecastAnalysisScreen() {
                 <span>RAINFALL ACCUM. (24H)</span>
                 <Droplets className="w-3.5 h-3.5 text-sky-600" />
               </div>
-              <div className="text-xl font-black text-slate-900 font-mono">12 mm</div>
-              <div className="text-[11px] font-semibold text-slate-500">Spread: 9.5 – 14.2 mm</div>
+              <div className="text-xl font-black text-slate-900 font-mono">{p50} mm</div>
+              <div className="text-[11px] font-semibold text-slate-500">Spread: {p10} – {p90} mm</div>
             </div>
 
             {/* Metric 3 */}
@@ -259,8 +279,8 @@ export default function ForecastAnalysisScreen() {
                 <span>SURFACE WIND</span>
                 <Wind className="w-3.5 h-3.5 text-sky-600" />
               </div>
-              <div className="text-xl font-black text-slate-900 font-mono">18 km/h NW</div>
-              <div className="text-[11px] font-semibold text-slate-500">Gusts up to 28 km/h</div>
+              <div className="text-xl font-black text-slate-900 font-mono">{sustainedWind} km/h NW</div>
+              <div className="text-[11px] font-semibold text-slate-500">Gusts up to {gustCeiling} km/h</div>
             </div>
 
             {/* Metric 4 */}
@@ -269,7 +289,7 @@ export default function ForecastAnalysisScreen() {
                 <span>RELATIVE HUMIDITY</span>
                 <Droplets className="w-3.5 h-3.5 text-sky-600" />
               </div>
-              <div className="text-xl font-black text-slate-900 font-mono">71%</div>
+              <div className="text-xl font-black text-slate-900 font-mono">{rhVal}%</div>
               <div className="text-[11px] font-semibold text-slate-500">Dew point: 22.4°C</div>
             </div>
 
@@ -279,7 +299,7 @@ export default function ForecastAnalysisScreen() {
                 <span>BAROMETRIC PRESSURE</span>
                 <Gauge className="w-3.5 h-3.5 text-sky-600" />
               </div>
-              <div className="text-xl font-black text-slate-900 font-mono">1008.4 hPa</div>
+              <div className="text-xl font-black text-slate-900 font-mono">{baroMslp} hPa</div>
               <div className="text-[11px] font-semibold text-amber-700">Tendency: -1.2 hPa / 3h</div>
             </div>
 
@@ -289,8 +309,8 @@ export default function ForecastAnalysisScreen() {
                 <span>CAPE / INSTABILITY</span>
                 <Zap className="w-3.5 h-3.5 text-amber-600" />
               </div>
-              <div className="text-xl font-black text-amber-600 font-mono">1850 J/kg</div>
-              <div className="text-[11px] font-semibold text-rose-700 font-bold">Squall trigger potential</div>
+              <div className="text-xl font-black text-amber-600 font-mono">{capeVal} J/kg</div>
+              <div className="text-[11px] font-semibold text-rose-700 font-bold">CIN: -{cinVal} J/kg (Squall trigger)</div>
             </div>
 
           </div>
@@ -613,33 +633,33 @@ export default function ForecastAnalysisScreen() {
             {/* Percentile Cards */}
             <div className="grid grid-cols-5 gap-2 text-center text-xs">
               <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
-                <div className="text-[10px] text-slate-400 font-bold uppercase">P10 (LOWER)</div>
+                <div className="text-[10px] text-slate-400 font-bold uppercase">P10 (FLOOR)</div>
                 <div className="text-base font-black text-slate-900 font-mono">24°C</div>
-                <div className="text-[10px] text-slate-500">4 mm rain</div>
+                <div className="text-[10px] text-slate-500 font-mono font-bold text-emerald-700">{p10} mm rain</div>
               </div>
 
               <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
                 <div className="text-[10px] text-slate-400 font-bold uppercase">P30</div>
                 <div className="text-base font-black text-slate-900 font-mono">26°C</div>
-                <div className="text-[10px] text-slate-500">8 mm rain</div>
+                <div className="text-[10px] text-slate-500 font-mono font-semibold">{((p10 + p50) / 2).toFixed(1)} mm rain</div>
               </div>
 
               <div className="p-2.5 rounded-xl bg-sky-50 border border-sky-300">
-                <div className="text-[10px] text-sky-800 font-bold uppercase">P50 (MEDIAN)</div>
-                <div className="text-base font-black text-sky-900 font-mono">28°C</div>
-                <div className="text-[10px] text-sky-700 font-bold">12 mm rain</div>
+                <div className="text-[10px] text-sky-800 font-bold uppercase">P50 (MEDIAN CONSENSUS)</div>
+                <div className="text-base font-black text-sky-900 font-mono">{blendedTemp}°C</div>
+                <div className="text-[10px] text-sky-700 font-black font-mono">{p50} mm rain</div>
               </div>
 
               <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
                 <div className="text-[10px] text-slate-400 font-bold uppercase">P70</div>
                 <div className="text-base font-black text-slate-900 font-mono">30°C</div>
-                <div className="text-[10px] text-slate-500">18 mm rain</div>
+                <div className="text-[10px] text-slate-500 font-mono font-semibold">{((p50 + p90) / 2).toFixed(1)} mm rain</div>
               </div>
 
               <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200">
-                <div className="text-[10px] text-rose-800 font-bold uppercase">P90 (RISK CEILING)</div>
+                <div className="text-[10px] text-rose-800 font-bold uppercase">P90 (BURST CEILING)</div>
                 <div className="text-base font-black text-rose-900 font-mono">32°C</div>
-                <div className="text-[10px] text-rose-700 font-bold">26 mm rain</div>
+                <div className="text-[10px] text-rose-700 font-black font-mono">{p90} mm rain</div>
               </div>
             </div>
           </div>
@@ -882,36 +902,44 @@ export default function ForecastAnalysisScreen() {
         </div>
 
         {/* Right Card: Severe Risk Signal */}
-        <div className="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-2xs space-y-4">
+        <div className={`rounded-3xl p-6 border shadow-2xs space-y-4 ${
+          isBustWarning
+            ? 'bg-rose-50/70 border-rose-300'
+            : 'bg-white border-slate-200/90'
+        }`}>
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
             <div className="flex items-center gap-2">
-              <ShieldAlert className="w-4 h-4 text-rose-600" />
+              <ShieldAlert className={`w-4 h-4 ${isBustWarning ? 'text-rose-600' : 'text-slate-500'}`} />
               <h3 className="text-base font-black text-slate-900 tracking-tight">
                 Severe Risk Signal
               </h3>
             </div>
-            <span className="px-2 py-0.5 rounded-md bg-rose-100 text-rose-900 text-[10px] font-black uppercase font-mono">
-              FLAGGED 06:14 UTC
+            <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase font-mono ${
+              alertLevel === 'RED' || alertLevel === 'ORANGE'
+                ? 'bg-rose-100 text-rose-900'
+                : 'bg-emerald-100 text-emerald-900'
+            }`}>
+              {alertLevel} ALERT (FLAGGED)
             </span>
           </div>
 
           <div className="space-y-3.5 text-xs">
             <h4 className="text-sm font-black text-rose-600">
-              Bust / Rapid Divergence Alert Flagged
+              {isBustWarning ? 'Bust / Rapid Divergence Alert Flagged' : 'Normal Atmospheric Dispersion'}
             </h4>
 
             <div className="space-y-2 text-xs">
               <div className="flex justify-between py-1.5 border-b border-slate-100">
                 <span className="text-slate-500">Targeted Sector:</span>
-                <span className="font-bold text-slate-900">Mahabaleshwar / Western Ghats Crest</span>
+                <span className="font-bold text-slate-900">{targetObservatory.name}</span>
               </div>
               <div className="flex justify-between py-1.5 border-b border-slate-100">
                 <span className="text-slate-500">Model Disagreement:</span>
-                <span className="font-bold text-rose-700">Significant (Ensemble Spread &gt; 3.8σ)</span>
+                <span className="font-bold text-rose-700">Bust Probability: {Math.round(bustProb * 100)}%</span>
               </div>
               <div className="flex justify-between py-1.5 border-b border-slate-100">
                 <span className="text-slate-500">Bust Risk Type:</span>
-                <span className="font-bold text-slate-800">Orographic Rainfall Under-Forecast</span>
+                <span className="font-bold text-slate-800">Orographic Convective Rapid Intensification</span>
               </div>
             </div>
 
@@ -920,7 +948,7 @@ export default function ForecastAnalysisScreen() {
                 OPERATIONAL RECOMMENDATION:
               </div>
               <p className="text-xs text-slate-300 leading-relaxed">
-                Monitor P90 risk ceiling for localized precipitation burst; verify with live Doppler velocity scan at 16:30 IST. Maintain amber caution status.
+                Orographic Convective Rapid Intensification risk detected. p90 hazard ceiling at <strong className="text-rose-400">{p90} mm</strong>. Monitor live Doppler velocity scan.
               </p>
             </div>
           </div>

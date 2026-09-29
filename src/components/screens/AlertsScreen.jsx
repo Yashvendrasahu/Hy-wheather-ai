@@ -18,6 +18,7 @@ import {
   Radio,
   Sun,
   CloudRain,
+  Wind,
   Flame,
   CheckCircle2,
   Sparkles

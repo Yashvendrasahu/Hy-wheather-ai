@@ -61,38 +61,100 @@ export function degreesToCompass(deg) {
   return arr[val % 16];
 }
 
-// Search locations dynamically using Open-Meteo Geocoding API
+// Search locations dynamically using Open-Meteo Geocoding API with OpenStreetMap Nominatim fallback
 export async function searchCitiesOnline(query) {
   if (!query || query.trim().length < 2) return [];
   try {
     const res = await axios.get(
       `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query.trim())}&count=10&language=en&format=json`,
-      { timeout: 6000 }
+      { timeout: 5000 }
     );
-    if (!res.data || !res.data.results) return [];
-    return res.data.results.map(item => ({
-      id: `geo-${item.id}`,
-      name: item.name,
-      region: item.admin1 || item.country || '',
-      country: item.country || '',
-      fullName: `${item.name}${item.admin1 ? `, ${item.admin1}` : ''}, ${item.country || ''}`,
-      latNum: item.latitude,
-      lngNum: item.longitude,
-      elev: item.elevation ? `${Math.round(item.elevation)}m` : '500m',
-      elevationNum: item.elevation || 500
-    }));
+    if (res.data && res.data.results && res.data.results.length > 0) {
+      return res.data.results.map(item => ({
+        id: `geo-${item.id}`,
+        name: item.name,
+        region: item.admin1 || item.country || '',
+        country: item.country || '',
+        fullName: `${item.name}${item.admin1 ? `, ${item.admin1}` : ''}, ${item.country || ''}`,
+        latNum: item.latitude,
+        lngNum: item.longitude,
+        elev: item.elevation ? `${Math.round(item.elevation)}m` : '500m',
+        elevationNum: item.elevation || 500
+      }));
+    }
   } catch (err) {
-    console.warn('Geocoding search failed:', err.message);
-    return [];
+    console.warn('Geocoding search failed, trying OpenStreetMap Nominatim:', err.message);
   }
+
+  // OpenStreetMap Nominatim search fallback
+  try {
+    const osmRes = await axios.get(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query.trim())}&format=json&limit=8&addressdetails=1`,
+      { timeout: 5000 }
+    );
+    if (osmRes.data && osmRes.data.length > 0) {
+      return osmRes.data.map(item => {
+        const addr = item.address || {};
+        const name = addr.city || addr.town || addr.village || addr.suburb || item.name || item.display_name.split(',')[0];
+        const region = addr.state || addr.region || '';
+        const country = addr.country || '';
+        return {
+          id: `osm-${item.place_id}`,
+          name,
+          region,
+          country,
+          fullName: item.display_name,
+          latNum: parseFloat(item.lat),
+          lngNum: parseFloat(item.lon),
+          elev: '500m',
+          elevationNum: 500
+        };
+      });
+    }
+  } catch (osmErr) {
+    console.warn('OpenStreetMap search fallback failed:', osmErr.message);
+  }
+
+  return [];
 }
 
-// Reverse geocode coordinates to obtain place name
+// Reverse geocode coordinates to obtain place name using OpenStreetMap (Nominatim) as primary source
 export async function reverseGeocode(lat, lon) {
+  // 1. Primary: OpenStreetMap Nominatim Reverse Geocoding
+  try {
+    const res = await axios.get(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=14&addressdetails=1`,
+      {
+        timeout: 4500,
+        headers: {
+          'Accept': 'application/json'
+        }
+      }
+    );
+
+    if (res.data && res.data.address) {
+      const addr = res.data.address;
+      const city = addr.city || addr.town || addr.village || addr.suburb || addr.municipality || addr.district || addr.state_district || addr.county || 'Local Area';
+      const region = addr.state || addr.region || addr.state_district || '';
+      const country = addr.country || 'India';
+      const fullName = `${city}${region ? `, ${region}` : ''}${country ? `, ${country}` : ''}`;
+
+      return {
+        name: city,
+        region,
+        country,
+        fullName
+      };
+    }
+  } catch (err) {
+    console.warn('OpenStreetMap Nominatim reverse geocode error:', err.message);
+  }
+
+  // 2. Secondary fallback: BigDataCloud Reverse Geocoding
   try {
     const res = await axios.get(
       `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`,
-      { timeout: 5000 }
+      { timeout: 3500 }
     );
     if (res.data) {
       const city = res.data.city || res.data.locality || res.data.principalSubdivision || 'Current Location';
@@ -106,13 +168,139 @@ export async function reverseGeocode(lat, lon) {
       };
     }
   } catch (err) {
-    console.warn('Reverse geocode fallback:', err.message);
+    console.warn('BigDataCloud reverse geocode fallback:', err.message);
   }
+
   return {
-    name: 'GPS Location',
+    name: 'Current Station',
     region: `${lat.toFixed(2)}°N`,
     country: `${lon.toFixed(2)}°E`,
     fullName: `Location (${lat.toFixed(3)}°N, ${lon.toFixed(3)}°E)`
+  };
+}
+
+// Auto-detect user coordinates:
+// 1. Browser Geolocation (high-accuracy GPS)
+// 2. If geolocation is denied/blocked/times out: IP Geolocation + OpenStreetMap
+// 3. Cached previous coordinates
+// 4. Default National Capital coordinates
+export async function detectUserCoordinates() {
+  // 1. Try browser Geolocation first
+  const getBrowserGps = () => {
+    return new Promise((resolve, reject) => {
+      if (typeof window === 'undefined' || !navigator.geolocation) {
+        return reject(new Error('Geolocation not supported by browser'));
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          resolve({
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+            source: 'gps'
+          });
+        },
+        (err) => {
+          reject(err);
+        },
+        { timeout: 4000, enableHighAccuracy: true, maximumAge: 30000 }
+      );
+    });
+  };
+
+  try {
+    const gpsRes = await getBrowserGps();
+    if (gpsRes?.latitude && gpsRes?.longitude) {
+      try {
+        localStorage.setItem('weatherai_last_detected_coords', JSON.stringify(gpsRes));
+      } catch (_) {}
+      return gpsRes;
+    }
+  } catch (gpsError) {
+    console.warn('Browser GPS permission not granted or timeout, falling back to IP/OpenStreetMap:', gpsError.message);
+  }
+
+  // 2. Fallback to IP-based Geolocation (ipapi.co)
+  try {
+    const res = await axios.get('https://ipapi.co/json/', { timeout: 3500 });
+    if (res.data && res.data.latitude && res.data.longitude) {
+      const coordData = {
+        latitude: parseFloat(res.data.latitude),
+        longitude: parseFloat(res.data.longitude),
+        cityHint: res.data.city,
+        regionHint: res.data.region,
+        countryHint: res.data.country_name,
+        source: 'ip-osm'
+      };
+      try {
+        localStorage.setItem('weatherai_last_detected_coords', JSON.stringify(coordData));
+      } catch (_) {}
+      return coordData;
+    }
+  } catch (e1) {
+    console.warn('ipapi.co fallback failed:', e1.message);
+  }
+
+  // 3. Fallback to ipwho.is
+  try {
+    const res = await axios.get('https://ipwho.is/', { timeout: 3500 });
+    if (res.data && res.data.success !== false && res.data.latitude && res.data.longitude) {
+      const coordData = {
+        latitude: parseFloat(res.data.latitude),
+        longitude: parseFloat(res.data.longitude),
+        cityHint: res.data.city,
+        regionHint: res.data.region,
+        countryHint: res.data.country,
+        source: 'ip-osm'
+      };
+      try {
+        localStorage.setItem('weatherai_last_detected_coords', JSON.stringify(coordData));
+      } catch (_) {}
+      return coordData;
+    }
+  } catch (e2) {
+    console.warn('ipwho.is fallback failed:', e2.message);
+  }
+
+  // 4. Fallback to freeipapi.com
+  try {
+    const res = await axios.get('https://freeipapi.com/api/json', { timeout: 3500 });
+    if (res.data && res.data.latitude && res.data.longitude) {
+      const coordData = {
+        latitude: parseFloat(res.data.latitude),
+        longitude: parseFloat(res.data.longitude),
+        cityHint: res.data.cityName,
+        regionHint: res.data.regionName,
+        countryHint: res.data.countryName,
+        source: 'ip-osm'
+      };
+      try {
+        localStorage.setItem('weatherai_last_detected_coords', JSON.stringify(coordData));
+      } catch (_) {}
+      return coordData;
+    }
+  } catch (e3) {
+    console.warn('freeipapi.com fallback failed:', e3.message);
+  }
+
+  // 5. Try cached coordinates from localStorage
+  try {
+    const cached = localStorage.getItem('weatherai_last_detected_coords');
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (parsed.latitude && parsed.longitude) {
+        return { ...parsed, source: 'cached' };
+      }
+    }
+  } catch (_) {}
+
+  // 6. Default to New Delhi (28.6139, 77.2090)
+  return {
+    latitude: 28.6139,
+    longitude: 77.2090,
+    cityHint: 'New Delhi',
+    regionHint: 'Delhi',
+    countryHint: 'India',
+    source: 'default'
   };
 }
 

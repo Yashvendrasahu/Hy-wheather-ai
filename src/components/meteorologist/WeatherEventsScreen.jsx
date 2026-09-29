@@ -37,6 +37,8 @@ export default function WeatherEventsScreen() {
     selectedEventId,
     setSelectedEventId,
     activeEvent,
+    targetObservatory,
+    synopticResult,
     setMetTab,
     setShowBulletinModal,
     setShowDisasterLiaisonModal,
@@ -48,6 +50,13 @@ export default function WeatherEventsScreen() {
   const [radarStep, setRadarStep] = useState(2); // 0: 14:00, 1: 16:00, 2: 18:00, 3: 20:00, 4: 22:00
   const [rightTab, setRightTab] = useState('signals'); // 'signals' | 'telemetry'
   const [isSyncing, setIsSyncing] = useState(false);
+
+  // Dynamic telemetry from PyTorch QRNN FastAPI backend
+  const p10 = synopticResult?.precipitation?.quantiles_mm?.p10 ?? 18.0;
+  const p50 = synopticResult?.precipitation?.quantiles_mm?.p50 ?? 38.0;
+  const p90 = synopticResult?.precipitation?.quantiles_mm?.p90 ?? 65.0;
+  const bustProb = synopticResult?.precipitation?.nwp_bust_probability ?? 0.78;
+  const alertLevel = synopticResult?.precipitation?.alert || 'ORANGE';
 
   // Filters
   const [regionFilter, setRegionFilter] = useState('All Regions (Central & West)');
@@ -585,12 +594,16 @@ export default function WeatherEventsScreen() {
                   Event Deep Dive: {activeEvent.headline}
                 </h3>
                 <p className="text-xs text-slate-500 font-medium">
-                  Location: {activeEvent.subdivision}
+                  Target Station: <strong className="text-slate-800">{targetObservatory.name}</strong>
                 </p>
               </div>
 
-              <span className="px-2.5 py-1 rounded-lg bg-rose-600 text-white text-xs font-black uppercase shadow-2xs">
-                {activeEvent.alertBadge}
+              <span className={`px-2.5 py-1 rounded-lg text-white text-xs font-black uppercase shadow-2xs ${
+                alertLevel === 'RED' ? 'bg-rose-600' :
+                alertLevel === 'ORANGE' ? 'bg-orange-600' :
+                alertLevel === 'YELLOW' ? 'bg-amber-500' : 'bg-emerald-600'
+              }`}>
+                {alertLevel === 'ORANGE' ? 'WARNING (ORANGE LEVEL)' : `${alertLevel} LEVEL`}
               </span>
             </div>
 
@@ -598,7 +611,7 @@ export default function WeatherEventsScreen() {
             <div className="grid grid-cols-3 gap-2 text-center p-3 bg-slate-50 rounded-2xl border border-slate-200 text-xs">
               <div>
                 <span className="text-[10px] text-slate-400 font-bold uppercase block">PROBABILITY</span>
-                <span className="text-lg font-black text-rose-600 font-mono">{activeEvent.deepDiveProb}</span>
+                <span className="text-lg font-black text-rose-600 font-mono">{Math.round(bustProb * 100)}%</span>
               </div>
               <div>
                 <span className="text-[10px] text-slate-400 font-bold uppercase block">DURATION</span>
@@ -614,7 +627,7 @@ export default function WeatherEventsScreen() {
             <div className="space-y-2">
               <div className="flex justify-between text-xs font-bold">
                 <span className="text-slate-700">PROBABILISTIC RAINFALL ACCUMULATION SPREAD</span>
-                <span className="text-sky-700 font-mono">Consensus P50: {activeEvent.consensusP50}</span>
+                <span className="text-sky-700 font-mono">Consensus P50: {p50} mm</span>
               </div>
 
               {/* Progress bar */}
@@ -627,15 +640,15 @@ export default function WeatherEventsScreen() {
               <div className="flex justify-between text-[10px] font-mono text-slate-500 pt-1">
                 <div>
                   <span className="text-slate-400 block">P10 (Floor)</span>
-                  <strong className="text-slate-800 text-xs">{activeEvent.p10Floor}</strong>
+                  <strong className="text-slate-800 text-xs">{p10} mm</strong>
                 </div>
                 <div className="text-center">
                   <span className="text-sky-700 font-bold block">P50 (Median)</span>
-                  <strong className="text-sky-900 text-sm font-black">{activeEvent.p50Median}</strong>
+                  <strong className="text-sky-900 text-sm font-black">{p50} mm</strong>
                 </div>
                 <div className="text-right">
                   <span className="text-rose-600 font-bold block">P90 (Burst Potential)</span>
-                  <strong className="text-rose-700 text-xs font-black">{activeEvent.p90Burst}</strong>
+                  <strong className="text-rose-700 text-xs font-black">{p90} mm</strong>
                 </div>
               </div>
 

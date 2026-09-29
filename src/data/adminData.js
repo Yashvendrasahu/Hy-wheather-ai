@@ -21,8 +21,8 @@ export const ADMIN_PROFILE = {
 };
 
 export const ADMIN_KPI_SUMMARY = {
-  dataPipeline: { active: 3, total: 3, status: 'Healthy', note: 'GFS, NCUM, Nowcast' },
-  featureVerification: { loaded: 38, total: 38, status: 'Verified', note: 'Isobaric & Radar Grids' },
+  dataPipeline: { active: 4, total: 4, status: 'Healthy', note: 'GFS, ECMWF, NCUM, WRF' },
+  featureVerification: { loaded: 18, total: 18, status: 'Verified', note: 'Exact feature count of scaler_metadata.joblib' },
   systemLatency: { value: 14, unit: 'ms', status: 'Normal', note: 'GovNIC Gateway Edge' },
   pendingVerification: { count: 5, status: 'Needs Review', note: '3 Met, 2 Disaster Auth' }
 };
@@ -36,7 +36,7 @@ export const LIVE_DATA_SYNC_PIPELINES = [
     status: 'Success',
     statusType: 'success',
     stage: 'Processed & Vectorized',
-    updated: 'Updated 2m ago',
+    updated: 'Updated < 2m ago',
     badge: 'Healthy',
     latency: '8ms'
   },
@@ -48,18 +48,18 @@ export const LIVE_DATA_SYNC_PIPELINES = [
     status: 'Success',
     statusType: 'success',
     stage: 'Validated & Ingested',
-    updated: 'Updated 4m ago',
+    updated: 'Updated < 4m ago',
     badge: 'Healthy',
     latency: '14ms'
   },
   {
     id: 'pipe-nowcast',
-    source: 'WeatherAI DeepNowcast Neural Model',
-    subSource: 'High-Frequency Radar Extrapolation',
+    source: 'WeatherAI Deep QRNN Attention Model',
+    subSource: 'Direct PyTorch CPU Checkpoint (Engine: v2.0-Production)',
     run: 'T+15m Live Inference',
     status: 'Processing',
     statusType: 'warning',
-    stage: 'Tensor Batching (84%)',
+    stage: 'Tensor Batching / Attention Gating',
     progress: 84,
     updated: 'Updated 45s ago',
     badge: 'Processing',
@@ -67,9 +67,9 @@ export const LIVE_DATA_SYNC_PIPELINES = [
   },
   {
     id: 'pipe-radar',
-    source: 'Doppler Radar Composite Network',
-    subSource: '34 S/C-Band Radars Aggregated',
-    run: 'Volume Scan #42',
+    source: 'ECMWF IFS & IMD WRF Ensemble',
+    subSource: '0.1° / 3km Convective Resolving Grids',
+    run: '00Z / 12Z Blended Grid',
     status: 'Success',
     statusType: 'success',
     stage: 'Synthesized & Mosaic Rendered',
@@ -206,13 +206,97 @@ export const OFFICIAL_REGISTRATION_QUEUE = [
 ];
 
 export const SYSTEM_HEALTH_SERVICES = [
-  { name: 'Core API Gateway', uptime: '99.99%', latency: '8ms', status: 'Healthy', statusType: 'healthy' },
-  { name: 'Data Ingestion Tile Processor', uptime: '100%', latency: '12ms', status: 'Healthy', statusType: 'healthy' },
-  { name: 'Forecast Synthesis Pipeline', uptime: '99.95%', latency: '19ms', status: 'Healthy', statusType: 'healthy' },
+  { name: 'Core API Gateway', uptime: '99.99%', latency: '< 15ms latency', status: 'Healthy', statusType: 'healthy' },
+  { name: 'AI Neural Inference', uptime: '99.98%', latency: 'Direct PyTorch CPU Checkpoint Loaded', status: 'Healthy', statusType: 'healthy' },
+  { name: 'Forecast Synthesis Pipeline', uptime: '99.95%', latency: 'Conformal Pinball Calibration Active', status: 'Healthy', statusType: 'healthy' },
   { name: 'PostgreSQL GovCloud Cluster', tier: 'Tier-4 • Primary Synced', status: 'Healthy', statusType: 'healthy' },
   { name: 'Emergency Notification Siren', queue: '100% Delivery Queue Ready', status: 'Healthy', statusType: 'healthy' },
   { name: 'Synoptic Radar Archive', capacity: '42.8 TB / 100 TB Allocated', status: 'Healthy', statusType: 'healthy' }
 ];
+
+export const PIPELINE_EXECUTION_STAGES = [
+  {
+    stage: 'STAGE 01',
+    name: 'Data Received',
+    desc: 'Multi-source ingest (GFS, ECMWF, IMD-AWS)',
+    status: 'Completed',
+    statusClass: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    time: '< 1m ago'
+  },
+  {
+    stage: 'STAGE 02',
+    name: 'Validation & QA',
+    desc: '18/18 Vectors passed (Checks against feat_mean & feat_std)',
+    status: 'Passed',
+    statusClass: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    time: '< 1m ago'
+  },
+  {
+    stage: 'STAGE 03',
+    name: 'Feature Processing',
+    desc: 'Dynamic Grids & Orographic Lift Normalized',
+    status: 'Completed',
+    statusClass: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    time: '< 2m ago'
+  },
+  {
+    stage: 'STAGE 04',
+    name: 'Model Inference',
+    desc: 'Deep QRNN attention feed (Logged latency: 42ms)',
+    status: 'Active',
+    statusClass: 'bg-sky-50 text-sky-700 border-sky-200',
+    time: 'Running'
+  },
+  {
+    stage: 'STAGE 05',
+    name: 'NWP & Blending',
+    desc: 'Pinball Loss Quantiles (p10, p50, p90) Calculated',
+    status: 'Calibrated',
+    statusClass: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    time: '< 3m ago'
+  },
+  {
+    stage: 'STAGE 06',
+    name: 'Published Output',
+    desc: 'Disseminated to Forecaster, NDMA & Public APIs',
+    status: 'Disseminated',
+    statusClass: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    time: 'Just now'
+  }
+];
+
+export const MODEL_AVAILABILITY_STATE = [
+  {
+    model: 'Deep QRNN Attention Model',
+    version: 'v2.0-Production (PyTorch CPU)',
+    availability: '99.9%',
+    action: 'Inspect Stream',
+    type: 'Neural Attention',
+    status: 'Active'
+  },
+  {
+    model: 'NCUM Regional 4km',
+    version: 'NCMRWF Unified Model Run',
+    availability: '98.6%',
+    action: 'Re-trigger Sync',
+    type: 'Regional Numerical',
+    status: 'Synced'
+  },
+  {
+    model: 'NOAA GFS Global',
+    version: '0.25° Global Ingestion Grid',
+    availability: '100.0%',
+    action: 'View Payload',
+    type: 'Global Numerical',
+    status: 'Synced'
+  }
+];
+
+export const DATA_VALIDATION_INTEGRITY = {
+  featureVectors: { label: 'Feature Vectors Completeness', value: '18 / 18 Verified', status: 'Passed' },
+  missingTolerance: { label: 'Missing Value Tolerance', value: '< 0.001% Interpolated', status: 'Nominal' },
+  hydroSanity: { label: 'Hydro-meteorological Threshold Sanity', value: 'Physical Bounds Valid (CIN Veto Active)', status: 'Verified' }
+};
 
 export const SYSTEM_RESOURCE_METRICS = {
   computeLoad: { percent: 46, detail: '32 Cores' },

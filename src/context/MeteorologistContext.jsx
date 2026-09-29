@@ -1,10 +1,11 @@
 // src/context/MeteorologistContext.jsx
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import {
   SCIENTIST_PROFILE,
   ACTIVE_SURVEILLANCE_EVENTS,
   ENSEMBLE_WEIGHTS
 } from '../data/meteorologistData.js';
+import { fetchSynopticForecast } from '../services/synopticService.js';
 
 const MeteorologistContext = createContext(null);
 
@@ -30,6 +31,57 @@ export function MeteorologistProvider({ children }) {
     region: 'Central India / Malwa Plateau'
   });
 
+  // Live Synoptic Model Payload and Result from backend
+  const [synopticPayload, setSynopticPayload] = useState({
+    latitude: 22.7196,
+    longitude: 75.8577,
+    climatic_zone: 4,
+    tp_gfs: 28.0,
+    tp_ecmwf: 32.0,
+    tp_ncum: 44.0,
+    tp_wrf: 52.0,
+    t2m_gfs: 29.2,
+    t2m_ecmwf: 27.8,
+    wind_gfs_kmh: 20.0,
+    wind_ecmwf_kmh: 17.0,
+    cape: 1850.0,
+    cin: 42.0,
+    rh_700: 71.0,
+    mslp: 1008.4,
+    wind_shear: 22.0,
+    elevation_m: 553.0,
+    terrain_slope_deg: 3.5,
+    radar_max_dbz: 52.0,
+    satellite_ctt_celsius: -56.0
+  });
+
+  const [synopticResult, setSynopticResult] = useState({
+    status: 'success',
+    precipitation: {
+      quantiles_mm: {
+        p10: 18.00,
+        p50: 38.00,
+        p90: 65.00
+      },
+      nwp_bust_probability: 0.78,
+      is_bust_warning: true,
+      conformal_coverage: '86.75% Guaranteed',
+      alert: 'ORANGE'
+    },
+    temperature: {
+      blended_2m_celsius: 28.0,
+      rothfusz_heat_index_celsius: 30.5,
+      heatwave_advisory: 'Normal'
+    },
+    wind: {
+      sustained_speed_kmh: 18.0,
+      gust_ceiling_p90_kmh: 28.0,
+      gale_warning: false
+    }
+  });
+
+  const [isLoadingForecast, setIsLoadingForecast] = useState(false);
+
   // Selected event for Deep Dive & Surveillance
   const [selectedEventId, setSelectedEventId] = useState('evt-indore');
 
@@ -46,6 +98,66 @@ export function MeteorologistProvider({ children }) {
     aiNeural: 33,
     regionalEps: 25
   });
+
+  // Keep a stable ref of the latest synoptic payload
+  const synopticPayloadRef = useRef(synopticPayload);
+  synopticPayloadRef.current = synopticPayload;
+
+  // Function to load live model telemetry on station selection
+  const refreshSynopticForecast = useCallback(async (customPayload = null) => {
+    setIsLoadingForecast(true);
+    const p = customPayload || synopticPayloadRef.current;
+    try {
+      const res = await fetchSynopticForecast(p);
+      if (res && res.precipitation) {
+        setSynopticResult(res);
+      }
+    } catch (err) {
+      console.warn('Error fetching synoptic telemetry:', err);
+    } finally {
+      setIsLoadingForecast(false);
+    }
+  }, []);
+
+  const lastStationKeyRef = useRef('');
+
+  // Load telemetry when target observatory changes
+  useEffect(() => {
+    const lat = targetObservatory?.lat || 22.7196;
+    const lng = targetObservatory?.lng || 75.8577;
+    const stationKey = `${targetObservatory?.id || 'indore'}_${lat}_${lng}`;
+
+    if (lastStationKeyRef.current === stationKey) {
+      return;
+    }
+    lastStationKeyRef.current = stationKey;
+
+    const newPayload = {
+      latitude: Number(lat),
+      longitude: Number(lng),
+      climatic_zone: 4,
+      tp_gfs: 28.0,
+      tp_ecmwf: 32.0,
+      tp_ncum: 44.0,
+      tp_wrf: 52.0,
+      t2m_gfs: 29.2,
+      t2m_ecmwf: 27.8,
+      wind_gfs_kmh: 20.0,
+      wind_ecmwf_kmh: 17.0,
+      cape: 1850.0,
+      cin: 42.0,
+      rh_700: 71.0,
+      mslp: 1008.4,
+      wind_shear: 22.0,
+      elevation_m: 553.0,
+      terrain_slope_deg: 3.5,
+      radar_max_dbz: 52.0,
+      satellite_ctt_celsius: -56.0
+    };
+    synopticPayloadRef.current = newPayload;
+    setSynopticPayload(newPayload);
+    refreshSynopticForecast(newPayload);
+  }, [targetObservatory?.id, targetObservatory?.lat, targetObservatory?.lng, refreshSynopticForecast]);
 
   // Modals
   const [showBulletinModal, setShowBulletinModal] = useState(false);
@@ -104,6 +216,11 @@ export function MeteorologistProvider({ children }) {
     setForecastViewWindow,
     customWeights,
     setCustomWeights,
+    synopticResult,
+    synopticPayload,
+    setSynopticPayload,
+    refreshSynopticForecast,
+    isLoadingForecast,
     showBulletinModal,
     setShowBulletinModal,
     showAddRegionModal,

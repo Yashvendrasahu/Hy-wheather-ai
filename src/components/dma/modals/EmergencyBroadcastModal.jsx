@@ -22,11 +22,12 @@ export default function EmergencyBroadcastModal() {
     selectedSector,
     officerUser,
     handleTriggerEmergencyBroadcast,
-    showToast
-  } = useMeteorologistDma();
+    showToast,
+    dmaForecast
+  } = useDisasterManagement();
 
   const [targetPolygon, setTargetPolygon] = useState(selectedSector.name);
-  const [severity, setSeverity] = useState('CRITICAL'); // 'CRITICAL' | 'HIGH' | 'MODERATE'
+  const [severity, setSeverity] = useState(dmaForecast?.precipitation?.alert || 'CRITICAL'); // 'CRITICAL' | 'HIGH' | 'MODERATE'
   const [sirenTone, setSirenTone] = useState(true);
   const [broadcastLanguage, setBroadcastLanguage] = useState('DUAL'); // 'DUAL' | 'HI' | 'EN'
   

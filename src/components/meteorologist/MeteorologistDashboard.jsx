@@ -35,8 +35,10 @@ import {
 export default function MeteorologistDashboard() {
   const {
     setMetTab,
+    targetObservatory,
     setTargetObservatory,
     setSelectedEventId,
+    synopticResult,
     setShowBulletinModal,
     setShowSoundingModal,
     showToast
@@ -46,6 +48,12 @@ export default function MeteorologistDashboard() {
   const [searchLocation, setSearchLocation] = useState('Indore, Madhya Pradesh');
   const [selectedRegion, setSelectedRegion] = useState('Central India - Region IV');
   const [isSyncing, setIsSyncing] = useState(false);
+
+  // Dynamic telemetry from PyTorch QRNN FastAPI backend
+  const liveTemp = synopticResult?.temperature?.blended_2m_celsius ?? 28;
+  const liveP50 = synopticResult?.precipitation?.quantiles_mm?.p50 ?? 38;
+  const liveBustProb = synopticResult?.precipitation?.nwp_bust_probability ?? 0.78;
+  const liveAlert = synopticResult?.precipitation?.alert || 'ORANGE';
 
   const filteredLocations = PRIORITY_LOCATIONS_TABLE.filter(loc => {
     if (activeTableFilter === 'high-watch') return loc.category === 'high-watch' || loc.category === 'severe';
@@ -341,79 +349,91 @@ export default function MeteorologistDashboard() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
-                  {filteredLocations.map((loc) => (
-                    <tr
-                      key={loc.id}
-                      className="hover:bg-slate-50/80 transition-colors group cursor-pointer"
-                      onClick={() => handleSelectLocation(loc)}
-                    >
-                      <td className="py-3 px-3">
-                        <div className="font-extrabold text-slate-900 text-sm group-hover:text-sky-700 transition-colors">
-                          {loc.name}
-                        </div>
-                        <div className="text-[11px] text-slate-400 font-mono">
-                          {loc.subdivision}
-                        </div>
-                      </td>
+                  {filteredLocations.map((loc) => {
+                    const isIndore = loc.id === 'indore';
+                    const dispWeather = isIndore ? `${liveTemp}°C ${liveP50 > 15 ? 'Convective Showers' : 'Partly Cloudy'}` : loc.currentWeather;
+                    const dispRainProb = isIndore ? Math.round(liveBustProb * 100) : loc.rainProb;
+                    const dispAlert = isIndore
+                      ? (liveAlert === 'ORANGE' ? 'Watch' : liveAlert === 'RED' ? 'Warning' : liveAlert === 'YELLOW' ? 'Advisory' : 'Normal')
+                      : loc.alertStatus;
+                    const dispAlertClass = isIndore
+                      ? (liveAlert === 'RED' ? 'bg-red-50 text-red-700 border-red-200' : liveAlert === 'ORANGE' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200')
+                      : loc.alertStatusClass;
 
-                      <td className="py-3 px-3">
-                        <div className="font-bold text-slate-800">
-                          {loc.currentWeather}
-                        </div>
-                        <div className="text-[11px] text-slate-500 truncate max-w-[150px]">
-                          {loc.condition}
-                        </div>
-                      </td>
-
-                      <td className="py-3 px-3">
-                        <div className="flex items-center gap-2">
-                          <div className="w-16 h-2 bg-slate-100 rounded-full overflow-hidden">
-                            <div
-                              className={`h-full ${loc.rainBarColor}`}
-                              style={{ width: `${loc.rainProb}%` }}
-                            />
+                    return (
+                      <tr
+                        key={loc.id}
+                        className="hover:bg-slate-50/80 transition-colors group cursor-pointer"
+                        onClick={() => handleSelectLocation(loc)}
+                      >
+                        <td className="py-3 px-3">
+                          <div className="font-extrabold text-slate-900 text-sm group-hover:text-sky-700 transition-colors">
+                            {loc.name}
                           </div>
-                          <span className="font-extrabold text-slate-900 font-mono">
-                            {loc.rainProb}%
+                          <div className="text-[11px] text-slate-400 font-mono">
+                            {loc.subdivision}
+                          </div>
+                        </td>
+
+                        <td className="py-3 px-3">
+                          <div className="font-bold text-slate-800">
+                            {dispWeather}
+                          </div>
+                          <div className="text-[11px] text-slate-500 truncate max-w-[150px]">
+                            {isIndore ? (liveP50 > 15 ? `Accum: ${liveP50} mm (P90 Threat)` : loc.condition) : loc.condition}
+                          </div>
+                        </td>
+
+                        <td className="py-3 px-3">
+                          <div className="flex items-center gap-2">
+                            <div className="w-16 h-2 bg-slate-100 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full ${isIndore ? (dispRainProb > 70 ? 'bg-rose-500' : 'bg-amber-500') : loc.rainBarColor}`}
+                                style={{ width: `${dispRainProb}%` }}
+                              />
+                            </div>
+                            <span className="font-extrabold text-slate-900 font-mono">
+                              {dispRainProb}%
+                            </span>
+                          </div>
+                        </td>
+
+                        <td className="py-3 px-3">
+                          <span className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase border ${loc.confidenceClass}`}>
+                            {loc.confidence}
                           </span>
-                        </div>
-                      </td>
+                        </td>
 
-                      <td className="py-3 px-3">
-                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase border ${loc.confidenceClass}`}>
-                          {loc.confidence}
-                        </span>
-                      </td>
+                        <td className="py-3 px-3">
+                          <div className="font-extrabold text-slate-900 font-mono">
+                            {loc.modelAgreement}
+                          </div>
+                          <div className="text-[10px] text-slate-400">
+                            {loc.modelAgreementDetail}
+                          </div>
+                        </td>
 
-                      <td className="py-3 px-3">
-                        <div className="font-extrabold text-slate-900 font-mono">
-                          {loc.modelAgreement}
-                        </div>
-                        <div className="text-[10px] text-slate-400">
-                          {loc.modelAgreementDetail}
-                        </div>
-                      </td>
+                        <td className="py-3 px-3">
+                          <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-extrabold border ${dispAlertClass}`}>
+                            {dispAlert}
+                          </span>
+                        </td>
 
-                      <td className="py-3 px-3">
-                        <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-extrabold border ${loc.alertStatusClass}`}>
-                          {loc.alertStatus}
-                        </span>
-                      </td>
-
-                      <td className="py-3 px-3 text-right">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleSelectLocation(loc);
-                          }}
-                          className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-sky-600 hover:text-white text-slate-700 text-xs font-bold transition-all cursor-pointer whitespace-nowrap inline-flex items-center gap-1"
-                        >
-                          <span>View Analysis</span>
-                          <span>→</span>
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                        <td className="py-3 px-3 text-right">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSelectLocation(loc);
+                            }}
+                            className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-sky-600 hover:text-white text-slate-700 text-xs font-bold transition-all cursor-pointer whitespace-nowrap inline-flex items-center gap-1"
+                          >
+                            <span>View Analysis</span>
+                            <span>→</span>
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

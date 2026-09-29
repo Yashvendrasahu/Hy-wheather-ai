@@ -7,6 +7,7 @@ import {
   Filter,
   RefreshCw,
   Download,
+  FileSpreadsheet,
   Play,
   Pause,
   AlertTriangle,
@@ -34,8 +35,20 @@ export default function AdminLogsScreen() {
     isLiveStreaming,
     setIsLiveStreaming,
     lastSyncTime,
-    showToast
+    showToast,
+    failuresSummary,
+    backendHealth
   } = useAdmin();
+
+  // Active failures calculation based on API exceptions & log state
+  const activeFailuresCount = useMemo(() => {
+    if (failuresSummary && failuresSummary.length > 0) {
+      return failuresSummary.filter(
+        (f) => f.severity === 'Warning' || f.severity === 'Critical' || f.severity === 'Investigating'
+      ).length;
+    }
+    return 1;
+  }, [failuresSummary]);
 
   // Filter states
   const [searchQuery, setSearchQuery] = useState('');
@@ -81,18 +94,90 @@ export default function AdminLogsScreen() {
     setSelectedTimeRange('24h');
   };
 
+  // Export Filtered Logs as CSV
+  const handleExportCSV = () => {
+    if (!filteredLogs || filteredLogs.length === 0) {
+      showToast('No Logs to Export', 'warning', 'No log records match your current filter criteria.');
+      return;
+    }
+
+    showToast('Exporting CSV', 'info', `Compiling ${filteredLogs.length} filtered log entries...`);
+
+    try {
+      const headers = [
+        'Log ID',
+        'Timestamp',
+        'Service',
+        'Severity',
+        'Status',
+        'Description',
+        'Detail',
+        'Duration',
+        'Impact Statement',
+        'Subsystem Pod',
+        'Error Code'
+      ];
+
+      const csvRows = [
+        headers.join(','),
+        ...filteredLogs.map((log) => {
+          const escapeCsv = (val) => {
+            if (val === undefined || val === null) return '""';
+            const str = String(val).replace(/"/g, '""');
+            return `"${str}"`;
+          };
+
+          return [
+            escapeCsv(log.id),
+            escapeCsv(log.time || log.detected),
+            escapeCsv(log.service),
+            escapeCsv(log.severity),
+            escapeCsv(log.status),
+            escapeCsv(log.description),
+            escapeCsv(log.detail),
+            escapeCsv(log.duration),
+            escapeCsv(log.impactStatement || ''),
+            escapeCsv(log.diagnostics?.pod || log.diagnostics?.subsystem || ''),
+            escapeCsv(log.diagnostics?.error_code || '')
+          ].join(',');
+        })
+      ];
+
+      const csvContent = csvRows.join('\r\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const downloadAnchor = document.createElement('a');
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      downloadAnchor.setAttribute('href', url);
+      downloadAnchor.setAttribute('download', `system-logs-export-${timestamp}.csv`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      document.body.removeChild(downloadAnchor);
+      URL.revokeObjectURL(url);
+
+      showToast(
+        'CSV Export Complete',
+        'success',
+        `Successfully exported ${filteredLogs.length} records to CSV.`
+      );
+    } catch (err) {
+      console.error('CSV export failed:', err);
+      showToast('Export Error', 'error', 'Failed to generate CSV file.');
+    }
+  };
+
   const handleExportLogs = () => {
     showToast('Exporting Log Bundle', 'info', 'Generating encrypted SHA-256 JSON audit archive...');
     setTimeout(() => {
-      const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(systemLogs, null, 2));
+      const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(filteredLogs, null, 2));
       const downloadAnchor = document.createElement('a');
       downloadAnchor.setAttribute('href', dataStr);
       downloadAnchor.setAttribute('download', `system-events-${Date.now()}.json`);
       document.body.appendChild(downloadAnchor);
       downloadAnchor.click();
       downloadAnchor.remove();
-      showToast('Export Complete', 'success', 'System events archive successfully downloaded.');
-    }, 800);
+      showToast('Export Complete', 'success', `Exported ${filteredLogs.length} filtered system events.`);
+    }, 600);
   };
 
   return (
@@ -144,11 +229,21 @@ export default function AdminLogsScreen() {
           </button>
 
           <button
+            onClick={handleExportCSV}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+            title="Export filtered records as CSV file to your device"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5" />
+            <span>Export CSV ({filteredLogs.length})</span>
+          </button>
+
+          <button
             onClick={handleExportLogs}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold shadow-xs"
+            title="Export full JSON encrypted audit package"
           >
             <Download className="w-3.5 h-3.5 text-slate-500" />
-            <span>Export Logs</span>
+            <span>Export JSON</span>
           </button>
 
           <div className="px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs font-mono text-slate-600 flex items-center gap-1.5">
@@ -169,7 +264,7 @@ export default function AdminLogsScreen() {
           </div>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-2xl font-bold font-mono text-emerald-600">0</span>
-            <span className="text-xs font-medium text-emerald-600">No Outages</span>
+            <span className="text-xs font-medium text-emerald-600">Zero Blockers</span>
           </div>
           <div className="mt-2 text-[11px] text-slate-500 pt-2 border-t border-slate-100">
             Zero P1 sev incidents active
@@ -184,11 +279,13 @@ export default function AdminLogsScreen() {
             </div>
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold font-mono text-amber-600">1</span>
-            <span className="text-xs font-medium text-amber-700">Under Investigation</span>
+            <span className="text-2xl font-bold font-mono text-amber-600">{activeFailuresCount}</span>
+            <span className="text-xs font-medium text-amber-700">
+              {activeFailuresCount > 0 ? 'In Remediation' : 'All Resolved'}
+            </span>
           </div>
           <div className="mt-2 text-[11px] text-slate-500 pt-2 border-t border-slate-100">
-            Zone Central-02 VRAM throttle
+            {activeFailuresCount > 0 ? 'Zone Central-02 VRAM throttle' : 'Zero Active Remediation'}
           </div>
         </div>
 
@@ -321,16 +418,35 @@ export default function AdminLogsScreen() {
           </div>
         </div>
 
-        <div className="flex items-center justify-between text-[11px] pt-2 border-t border-slate-100 text-slate-500">
-          <div>
-            Showing <strong className="text-slate-800">{filteredLogs.length}</strong> system event entries
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] pt-2 border-t border-slate-100 text-slate-500">
+          <div className="flex flex-wrap items-center gap-2">
+            <span>
+              Showing <strong className="text-slate-800">{filteredLogs.length}</strong> of{' '}
+              <strong className="text-slate-600">{systemLogs.length}</strong> system event entries
+            </span>
+            {(searchQuery || selectedSeverity !== 'ALL' || selectedService !== 'ALL' || selectedStatus !== 'ALL') && (
+              <span className="px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 font-medium text-[10px] border border-sky-200">
+                Filters Active
+              </span>
+            )}
           </div>
-          <button
-            onClick={clearFilters}
-            className="text-sky-600 hover:text-sky-700 font-medium"
-          >
-            Clear All Filters
-          </button>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleExportCSV}
+              className="inline-flex items-center gap-1 text-emerald-700 hover:text-emerald-800 font-semibold cursor-pointer"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5" />
+              <span>Download Filtered as CSV</span>
+            </button>
+            <span className="text-slate-300">•</span>
+            <button
+              onClick={clearFilters}
+              className="text-sky-600 hover:text-sky-700 font-medium cursor-pointer"
+            >
+              Clear All Filters
+            </button>
+          </div>
         </div>
       </div>
 

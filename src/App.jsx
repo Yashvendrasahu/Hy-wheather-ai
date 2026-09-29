@@ -1,9 +1,12 @@
 // src/App.jsx
 import React from 'react';
+import { AuthProvider, useAuth } from './context/AuthContext.jsx';
 import { WeatherProvider, useWeather } from './context/WeatherContext.jsx';
 import { MeteorologistProvider, useMeteorologist } from './context/MeteorologistContext.jsx';
 import { DisasterManagementProvider, useDisasterManagement } from './context/DisasterManagementContext.jsx';
 import { AdminProvider, useAdmin } from './context/AdminContext.jsx';
+import { RoleRoute, AuthLoadingScreen, OtpVerificationRoute, ProtectedRoute } from './components/common/AuthGuards.jsx';
+import OtpVerificationScreen from './components/common/OtpVerificationScreen.jsx';
 
 // Citizen Common Components
 import Header from './components/common/Header.jsx';
@@ -20,6 +23,7 @@ import WeatherMapScreen from './components/screens/WeatherMapScreen.jsx';
 import AlertsScreen from './components/screens/AlertsScreen.jsx';
 import LocationSearchScreen from './components/screens/LocationSearchScreen.jsx';
 import AboutScreen from './components/screens/AboutScreen.jsx';
+import UserSignupScreen from './components/screens/UserSignupScreen.jsx';
 
 // Meteorologist Components & Screens
 import MeteorologistNavbar from './components/meteorologist/MeteorologistNavbar.jsx';
@@ -236,32 +240,83 @@ function AdminPortal() {
 
 function AppContent() {
   const { portalMode } = useMeteorologist();
+  const { isLoading, otpState } = useAuth();
 
+  if (isLoading) {
+    return <AuthLoadingScreen />;
+  }
+
+  // If operational 2FA OTP verification is required
+  if (otpState.pending || portalMode === 'otp') {
+    return (
+      <OtpVerificationRoute>
+        <OtpVerificationScreen />
+      </OtpVerificationRoute>
+    );
+  }
+
+  // Explicit Login screen request
+  if (portalMode === 'login') {
+    return <LoginScreen />;
+  }
+
+  // Explicit User Signup screen request
+  if (portalMode === 'signup') {
+    return <UserSignupScreen />;
+  }
+
+  // Public / Citizen Portal
   if (portalMode === 'citizen') {
     return <CitizenPortal />;
   }
 
+  // Meteorologist Synoptic Desk (Protected RoleRoute)
   if (portalMode === 'meteorologist') {
-    return <MeteorologistPortal />;
+    return (
+      <RoleRoute
+        allowedRoles={['meteorologist', 'administrator']}
+        portalName="Meteorologist Synoptic Desk"
+      >
+        <MeteorologistPortal />
+      </RoleRoute>
+    );
   }
 
+  // Disaster Management Authority / Civic EOC (Protected RoleRoute)
   if (portalMode === 'dma') {
-    return <DMAPortal />;
+    return (
+      <RoleRoute
+        allowedRoles={['disaster_manager', 'administrator']}
+        portalName="Disaster Management Authority (EOC)"
+      >
+        <DMAPortal />
+      </RoleRoute>
+    );
   }
 
-  return <AdminPortal />;
+  // System Administrator & DevOps Console (Protected RoleRoute)
+  return (
+    <RoleRoute
+      allowedRoles={['administrator']}
+      portalName="System Administrator & DevOps Console"
+    >
+      <AdminPortal />
+    </RoleRoute>
+  );
 }
 
 export default function App() {
   return (
-    <AdminProvider>
-      <MeteorologistProvider>
-        <DisasterManagementProvider>
-          <WeatherProvider>
-            <AppContent />
-          </WeatherProvider>
-        </DisasterManagementProvider>
-      </MeteorologistProvider>
-    </AdminProvider>
+    <AuthProvider>
+      <AdminProvider>
+        <MeteorologistProvider>
+          <DisasterManagementProvider>
+            <WeatherProvider>
+              <AppContent />
+            </WeatherProvider>
+          </DisasterManagementProvider>
+        </MeteorologistProvider>
+      </AdminProvider>
+    </AuthProvider>
   );
 }

@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { useAdmin } from '../../context/AdminContext.jsx';
 import { useMeteorologist } from '../../context/MeteorologistContext.jsx';
+import { useAuth } from '../../context/AuthContext.jsx';
 import {
   ShieldAlert,
   Layers,
@@ -34,10 +35,15 @@ export default function AdminNavbar() {
     registrationQueue,
     refreshDashboard,
     lastSyncTime,
-    openDiagnostics
+    openDiagnostics,
+    backendHealth,
+    liveNode,
+    clusterUptime,
+    isProbing
   } = useAdmin();
 
   const { setPortalMode } = useMeteorologist();
+  const { logout, profile } = useAuth();
 
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [roleSwitcherOpen, setRoleSwitcherOpen] = useState(false);
@@ -64,11 +70,15 @@ export default function AdminNavbar() {
           </div>
           <span className="hidden md:inline text-slate-600">|</span>
           <span className="hidden md:inline text-slate-400">
-            Node: <span className="text-sky-400 font-mono font-semibold">SEC-01 (Zone Central)</span>
+            Node: <span className="text-sky-400 font-mono font-semibold">{liveNode}</span>
           </span>
           <span className="hidden lg:inline text-slate-600">|</span>
           <span className="hidden lg:inline text-slate-400 font-mono">
-            PKI Clearance: Tier-1 Cryptographic
+            Uptime: <strong className="text-emerald-400 font-semibold">{clusterUptime}</strong>
+          </span>
+          <span className="hidden xl:inline text-slate-600">|</span>
+          <span className="hidden xl:inline text-slate-400 font-mono">
+            Sync Latency: <span className="text-sky-300 font-bold">{backendHealth?.latency || 14} ms</span>
           </span>
         </div>
 
@@ -78,7 +88,7 @@ export default function AdminNavbar() {
           </span>
           <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-950/60 border border-emerald-700/50 text-emerald-400 text-[10px] font-mono">
             <CheckCircle2 className="w-3 h-3" />
-            <span>CORE GRID 99.98%</span>
+            <span>CORE GRID {clusterUptime}</span>
           </div>
         </div>
       </div>
@@ -144,11 +154,11 @@ export default function AdminNavbar() {
             <button
               onClick={() => openDiagnostics()}
               className="hidden lg:flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-slate-800/80 hover:bg-slate-800 border border-slate-700/70 text-slate-300 text-xs transition-colors"
-              title="Click to view node diagnostics"
+              title={`Live Node: ${liveNode} • Ping: ${backendHealth?.latency || 14}ms`}
             >
-              <div className="w-2 h-2 rounded-full bg-emerald-400"></div>
+              <div className={`w-2 h-2 rounded-full ${isProbing ? 'bg-amber-400 animate-ping' : 'bg-emerald-400'}`}></div>
               <span className="font-mono text-[11px] text-slate-300">Live Node:</span>
-              <span className="font-mono font-semibold text-emerald-400 text-[11px]">SEC-01</span>
+              <span className="font-mono font-semibold text-emerald-400 text-[11px]">Zone Central-02</span>
             </button>
 
             {/* Manual Sync Telemetry */}
@@ -366,10 +376,21 @@ export default function AdminNavbar() {
                         setPortalMode('citizen');
                         setProfileDropdownOpen(false);
                       }}
-                      className="w-full text-left px-3 py-1.5 rounded hover:bg-slate-800 text-rose-300 flex items-center gap-2"
+                      className="w-full text-left px-3 py-1.5 rounded hover:bg-slate-800 text-slate-300 flex items-center gap-2 cursor-pointer"
+                    >
+                      <LogOut className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Exit to Public Portal</span>
+                    </button>
+                    <button
+                      onClick={async () => {
+                        setProfileDropdownOpen(false);
+                        await logout();
+                        setPortalMode('citizen');
+                      }}
+                      className="w-full text-left px-3 py-1.5 rounded hover:bg-slate-800 text-rose-300 flex items-center gap-2 cursor-pointer"
                     >
                       <LogOut className="w-3.5 h-3.5 text-rose-400" />
-                      <span>Exit Admin Enclave</span>
+                      <span>Sign Out (Supabase Auth)</span>
                     </button>
                   </div>
                 </div>

@@ -1,5 +1,5 @@
 // src/context/DisasterManagementContext.jsx
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useRef, useCallback, useEffect } from 'react';
 import {
   DMA_OFFICER_PROFILE,
   DMA_SUMMARY_METRICS,
@@ -10,6 +10,168 @@ import {
   INTER_AGENCY_ESCALATION_QUEUE,
   NOTIFICATION_ITEMS
 } from '../data/disasterManagementData.js';
+import { fetchSynopticForecast } from '../services/synopticService.js';
+
+export const DEFAULT_DMA_PAYLOAD = {
+  latitude: 22.7196,
+  longitude: 75.8577,
+  climatic_zone: 4,
+  tp_gfs: 32.0,
+  tp_ecmwf: 42.0,
+  tp_ncum: 48.0,
+  tp_wrf: 58.0,
+  t2m_gfs: 28.5,
+  t2m_ecmwf: 29.0,
+  wind_gfs_kmh: 22.0,
+  wind_ecmwf_kmh: 26.0,
+  cape: 1850.0,
+  cin: 30.0,
+  rh_700: 84.0,
+  mslp: 1008.0,
+  wind_shear: 24.0,
+  elevation_m: 553.0,
+  terrain_slope_deg: 3.5,
+  radar_max_dbz: 52.0,
+  satellite_ctt_celsius: -58.0
+};
+
+export const SECTOR_PAYLOAD_MAP = {
+  'sec-indore': {
+    latitude: 22.7196,
+    longitude: 75.8577,
+    climatic_zone: 4,
+    tp_gfs: 32.0,
+    tp_ecmwf: 42.0,
+    tp_ncum: 48.0,
+    tp_wrf: 58.0,
+    t2m_gfs: 28.5,
+    t2m_ecmwf: 29.0,
+    wind_gfs_kmh: 22.0,
+    wind_ecmwf_kmh: 26.0,
+    cape: 1850.0,
+    cin: 30.0,
+    rh_700: 84.0,
+    mslp: 1008.0,
+    wind_shear: 24.0,
+    elevation_m: 553.0,
+    terrain_slope_deg: 3.5,
+    radar_max_dbz: 52.0,
+    satellite_ctt_celsius: -58.0
+  },
+  'sec-dewas': {
+    latitude: 22.9676,
+    longitude: 76.0534,
+    climatic_zone: 4,
+    tp_gfs: 28.0,
+    tp_ecmwf: 38.0,
+    tp_ncum: 44.0,
+    tp_wrf: 54.0,
+    t2m_gfs: 28.0,
+    t2m_ecmwf: 28.5,
+    wind_gfs_kmh: 20.0,
+    wind_ecmwf_kmh: 24.0,
+    cape: 1750.0,
+    cin: 35.0,
+    rh_700: 82.0,
+    mslp: 1008.5,
+    wind_shear: 22.0,
+    elevation_m: 535.0,
+    terrain_slope_deg: 2.8,
+    radar_max_dbz: 48.0,
+    satellite_ctt_celsius: -54.0
+  },
+  'sec-ujjain': {
+    latitude: 23.1765,
+    longitude: 75.7885,
+    climatic_zone: 4,
+    tp_gfs: 24.0,
+    tp_ecmwf: 32.0,
+    tp_ncum: 38.0,
+    tp_wrf: 46.0,
+    t2m_gfs: 29.0,
+    t2m_ecmwf: 29.5,
+    wind_gfs_kmh: 26.0,
+    wind_ecmwf_kmh: 30.0,
+    cape: 1600.0,
+    cin: 40.0,
+    rh_700: 76.0,
+    mslp: 1007.8,
+    wind_shear: 28.0,
+    elevation_m: 494.0,
+    terrain_slope_deg: 2.1,
+    radar_max_dbz: 44.0,
+    satellite_ctt_celsius: -50.0
+  },
+  'sec-bhopal': {
+    latitude: 23.2599,
+    longitude: 77.4126,
+    climatic_zone: 4,
+    tp_gfs: 20.0,
+    tp_ecmwf: 26.0,
+    tp_ncum: 32.0,
+    tp_wrf: 38.0,
+    t2m_gfs: 27.5,
+    t2m_ecmwf: 28.0,
+    wind_gfs_kmh: 18.0,
+    wind_ecmwf_kmh: 20.0,
+    cape: 1400.0,
+    cin: 45.0,
+    rh_700: 72.0,
+    mslp: 1009.2,
+    wind_shear: 18.0,
+    elevation_m: 527.0,
+    terrain_slope_deg: 3.0,
+    radar_max_dbz: 38.0,
+    satellite_ctt_celsius: -46.0
+  },
+  'sec-jabalpur': {
+    latitude: 23.1815,
+    longitude: 79.9864,
+    climatic_zone: 4,
+    tp_gfs: 4.0,
+    tp_ecmwf: 6.0,
+    tp_ncum: 8.0,
+    tp_wrf: 10.0,
+    t2m_gfs: 26.5,
+    t2m_ecmwf: 27.0,
+    wind_gfs_kmh: 12.0,
+    wind_ecmwf_kmh: 14.0,
+    cape: 800.0,
+    cin: 75.0,
+    rh_700: 55.0,
+    mslp: 1011.0,
+    wind_shear: 12.0,
+    elevation_m: 411.0,
+    terrain_slope_deg: 2.5,
+    radar_max_dbz: 22.0,
+    satellite_ctt_celsius: -28.0
+  }
+};
+
+export const DEFAULT_DMA_FORECAST = {
+  status: 'success',
+  precipitation: {
+    quantiles_mm: {
+      p10: 24.00,
+      p50: 52.90,
+      p90: 92.50
+    },
+    nwp_bust_probability: 0.78,
+    is_bust_warning: true,
+    conformal_coverage: '86.75% Guaranteed',
+    alert: 'RED'
+  },
+  temperature: {
+    blended_2m_celsius: 28.0,
+    rothfusz_heat_index_celsius: 34.0,
+    heatwave_advisory: 'Normal'
+  },
+  wind: {
+    sustained_speed_kmh: 24.0,
+    gust_ceiling_p90_kmh: 38.0,
+    gale_warning: false
+  }
+};
 
 const DisasterManagementContext = createContext(null);
 
@@ -31,6 +193,49 @@ export function DisasterManagementProvider({ children }) {
   const [incidents, setIncidents] = useState(ACTIVE_INCIDENTS_LIST);
   const [dispatchLogs, setDispatchLogs] = useState(DISPATCH_ACTIVITY_LOG);
   const [escalations, setEscalations] = useState(INTER_AGENCY_ESCALATION_QUEUE);
+
+  // Live PyTorch QRNN FastAPI Backend Integration State
+  const [dmaPayload, setDmaPayload] = useState(DEFAULT_DMA_PAYLOAD);
+  const [dmaForecast, setDmaForecast] = useState(DEFAULT_DMA_FORECAST);
+  const [isLoadingDmaForecast, setIsLoadingDmaForecast] = useState(false);
+
+  const dmaPayloadRef = useRef(dmaPayload);
+  dmaPayloadRef.current = dmaPayload;
+
+  const refreshDmaForecast = useCallback(async (customPayload = null) => {
+    setIsLoadingDmaForecast(true);
+    const p = customPayload || dmaPayloadRef.current;
+    try {
+      const res = await fetchSynopticForecast(p);
+      if (res && res.precipitation) {
+        setDmaForecast(res);
+      }
+    } catch (err) {
+      console.warn('Error fetching DMA synoptic forecast:', err);
+    } finally {
+      setIsLoadingDmaForecast(false);
+    }
+  }, []);
+
+  const lastSectorKeyRef = useRef('');
+
+  // Update payload & load telemetry when target district/sector changes
+  useEffect(() => {
+    if (lastSectorKeyRef.current === selectedSectorId) {
+      return;
+    }
+    lastSectorKeyRef.current = selectedSectorId;
+
+    const sectorPayload = SECTOR_PAYLOAD_MAP[selectedSectorId] || {
+      ...DEFAULT_DMA_PAYLOAD,
+      latitude: selectedSector?.center?.[0] || 22.7196,
+      longitude: selectedSector?.center?.[1] || 75.8577
+    };
+
+    dmaPayloadRef.current = sectorPayload;
+    setDmaPayload(sectorPayload);
+    refreshDmaForecast(sectorPayload);
+  }, [selectedSectorId, refreshDmaForecast]);
 
   // Map Filter states
   const [mapHazardFilter, setMapHazardFilter] = useState('all'); // 'all' | 'rainfall' | 'flood' | 'heat' | 'wind' | 'thunderstorm'
@@ -253,6 +458,12 @@ export function DisasterManagementProvider({ children }) {
     setDispatchModalData,
     dmaToast,
     showToast,
+    dmaPayload,
+    setDmaPayload,
+    dmaForecast,
+    setDmaForecast,
+    isLoadingDmaForecast,
+    refreshDmaForecast,
     handleTriggerEmergencyBroadcast,
     handleSendOfficialAlert,
     handlePublishPublicAdvisory,

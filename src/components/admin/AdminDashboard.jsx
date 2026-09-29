@@ -57,7 +57,12 @@ export default function AdminDashboard() {
     approveApplicant,
     rejectApplicant,
     setAdminTab,
-    showToast
+    showToast,
+    backendHealth,
+    inferenceTelemetry,
+    liveNode,
+    clusterUptime,
+    isProbing
   } = useAdmin();
 
   const currentDateFormatted = new Date().toLocaleDateString('en-IN', {
@@ -91,14 +96,17 @@ export default function AdminDashboard() {
             <span>{currentDateFormatted}</span>
             <span className="text-slate-400">•</span>
             <span className="text-slate-600">Last Synced: <strong className="text-slate-900">{lastSyncTime}</strong></span>
+            <span className="text-slate-400">•</span>
+            <span className="text-emerald-700 font-semibold">{liveNode}</span>
           </div>
 
           <button
             onClick={refreshDashboard}
+            disabled={isProbing}
             className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200 text-xs font-semibold shadow-sm transition-all"
           >
-            <RefreshCw className="w-3.5 h-3.5" />
-            <span>Refresh Dashboard</span>
+            <RefreshCw className={`w-3.5 h-3.5 ${isProbing ? 'animate-spin' : ''}`} />
+            <span>{isProbing ? 'Probing Backend...' : 'Refresh Dashboard'}</span>
           </button>
         </div>
       </div>
@@ -118,7 +126,7 @@ export default function AdminDashboard() {
                 </span>
               </div>
               <p className="text-xs text-amber-800 mt-0.5">
-                Tensor batch inference queues holding at 142 requests. Numerical GFS/NCUM pipeline operational.
+                Tensor batch inference turnaround at {inferenceTelemetry?.latency || 42}ms. PyTorch CPU checkpoint calibrated.
               </p>
             </div>
           </div>
@@ -151,11 +159,11 @@ export default function AdminDashboard() {
             </div>
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold font-mono text-slate-900">3/3</span>
+            <span className="text-2xl font-bold font-mono text-slate-900">4 / 4</span>
             <span className="text-xs font-medium text-emerald-600">Streams Active</span>
           </div>
           <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500 pt-2 border-t border-slate-100">
-            <span>NOAA GFS, IMD NCUM</span>
+            <span>GFS, ECMWF, NCUM, WRF</span>
             <span className="font-semibold text-emerald-600">100% Ingested</span>
           </div>
         </div>
@@ -169,11 +177,13 @@ export default function AdminDashboard() {
             </div>
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold font-mono text-slate-900">38/38</span>
-            <span className="text-xs font-medium text-sky-600">Vectors Loaded</span>
+            <span className="text-2xl font-bold font-mono text-slate-900">18 / 18</span>
+            <span className="text-xs font-medium text-sky-600">Weather Vectors Loaded</span>
           </div>
           <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500 pt-2 border-t border-slate-100">
-            <span>Isobaric & Radar Grids</span>
+            <span title="Exact feature count of scaler_metadata.joblib" className="truncate max-w-[170px]">
+              scaler_metadata.joblib
+            </span>
             <span className="font-semibold text-sky-700">Verified</span>
           </div>
         </div>
@@ -187,12 +197,19 @@ export default function AdminDashboard() {
             </div>
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold font-mono text-slate-900">14</span>
+            <span className="text-2xl font-bold font-mono text-slate-900">
+              {backendHealth?.latency || 14}
+            </span>
             <span className="text-xs font-medium text-slate-500 font-mono">ms</span>
+            {isProbing && (
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping"></span>
+            )}
           </div>
           <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500 pt-2 border-t border-slate-100">
-            <span>GovNIC Gateway Edge</span>
-            <span className="font-semibold text-emerald-600">Optimal SLA</span>
+            <span className="truncate max-w-[170px]">
+              {backendHealth?.service ? 'MoES Direct API Gateway' : 'GovNIC Gateway Edge'}
+            </span>
+            <span className="font-semibold text-emerald-600">&lt; 15ms Optimal</span>
           </div>
         </div>
 
@@ -211,7 +228,7 @@ export default function AdminDashboard() {
             <span className="text-xs font-medium text-amber-700">Requests Waiting</span>
           </div>
           <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500 pt-2 border-t border-slate-100">
-            <span>Official Registrations</span>
+            <span>Awaiting Role Elevation</span>
             <span
               onClick={() => setAdminTab('approvals')}
               className="font-semibold text-sky-600 hover:underline cursor-pointer"

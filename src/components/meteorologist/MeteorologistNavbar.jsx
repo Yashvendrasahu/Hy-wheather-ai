@@ -1,6 +1,7 @@
 // src/components/meteorologist/MeteorologistNavbar.jsx
 import React, { useState } from 'react';
 import { useMeteorologist } from '../../context/MeteorologistContext.jsx';
+import { useAuth } from '../../context/AuthContext.jsx';
 import {
   Shield,
   Radio,
@@ -28,6 +29,8 @@ export default function MeteorologistNavbar() {
     handleLogout,
     showToast
   } = useMeteorologist();
+
+  const { logout, profile } = useAuth();
 
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -314,9 +317,11 @@ export default function MeteorologistNavbar() {
                     </button>
                     <div className="pt-2 border-t border-slate-100">
                       <button
-                        onClick={() => {
+                        onClick={async () => {
                           setShowProfileMenu(false);
                           handleLogout();
+                          await logout();
+                          setPortalMode('citizen');
                         }}
                         className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold text-rose-600 hover:bg-rose-50 transition-colors text-left cursor-pointer"
                       >

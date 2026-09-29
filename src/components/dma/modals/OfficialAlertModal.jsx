@@ -19,12 +19,13 @@ export default function OfficialAlertModal() {
     selectedSector,
     officerUser,
     handleSendOfficialAlert,
-    showToast
+    showToast,
+    dmaForecast
   } = useDisasterManagement();
 
-  const [recipient, setRecipient] = useState('Indore Collectorate & Municipal EOC');
-  const [dispatchCode, setDispatchCode] = useState('EOC-MP04-HR-FLASH-0914');
-  const [severity, setSeverity] = useState('CRITICAL — Heavy Rain (52.9 mm/h)');
+  const [recipient, setRecipient] = useState(`${selectedSector?.name || 'Indore'} Collectorate & Municipal EOC`);
+  const [dispatchCode, setDispatchCode] = useState(selectedSector?.dispatchCode || 'EOC-MP04-HR-FLASH-0914');
+  const [severity, setSeverity] = useState(`${dmaForecast?.precipitation?.alert || 'CRITICAL'} — Heavy Rain (${dmaForecast?.precipitation?.quantiles_mm?.p50 || 52.9} mm/h)`);
   const [actionDirectives, setActionDirectives] = useState(
     '1. Activate Municipal Flood Control Cells.\n2. Barricade Ring Road underpasses and Pipliyahana low-lying subway.\n3. Position SDRF Unit 03 at Khan River vulnerable catchment.'
   );

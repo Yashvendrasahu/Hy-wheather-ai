@@ -27,10 +27,12 @@ import {
 } from 'lucide-react';
 
 export default function AnalyticsScreen() {
-  const { showToast } = useMeteorologist();
+  const { synopticResult, showToast } = useMeteorologist();
 
   const [selectedCluster, setSelectedCluster] = useState('Malwa Plateau');
   const [selectedSeason, setSelectedSeason] = useState('Southwest Monsoon');
+
+  const coverageText = synopticResult?.precipitation?.conformal_coverage || '86.75% Guaranteed';
 
   return (
     <div className="space-y-6 animate-fade-in font-sans">
@@ -209,11 +211,11 @@ export default function AnalyticsScreen() {
             DATA COVERAGE
           </span>
           <div className="text-xl sm:text-2xl font-black text-emerald-700 font-mono">
-            {ANALYTICS_KPIS.dataCoverage}
+            {coverageText.split(' ')[0]}
           </div>
           <div className="text-[10px] text-emerald-800 font-bold flex items-center gap-1">
             <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-            <span>{ANALYTICS_KPIS.coverageNote}</span>
+            <span>{coverageText} (Conformal)</span>
           </div>
         </div>
 

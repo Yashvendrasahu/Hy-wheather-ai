@@ -1,10 +1,14 @@
 // src/components/common/Footer.jsx
 import React from 'react';
 import { useWeather } from '../../context/WeatherContext.jsx';
-import { CloudRain, Sparkles } from 'lucide-react';
+import { useMeteorologist } from '../../context/MeteorologistContext.jsx';
+import { useAuth } from '../../context/AuthContext.jsx';
+import { CloudRain, Sparkles, Shield, Lock } from 'lucide-react';
 
 export default function Footer() {
   const { setActiveTab } = useWeather();
+  const { setPortalMode } = useMeteorologist();
+  const { user, role } = useAuth();
 
   return (
     <footer className="bg-white border-t border-slate-200 mt-16 pt-12 pb-8 text-slate-600 text-sm">
@@ -109,17 +113,42 @@ export default function Footer() {
               </li>
             </ul>
 
-            <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2">About</h4>
-            <ul className="space-y-1 text-xs">
+            <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2">About & Operations</h4>
+            <ul className="space-y-1.5 text-xs">
               <li>
-                <button onClick={() => setActiveTab('about')} className="hover:text-sky-600 transition-colors">
+                <button onClick={() => setActiveTab('about')} className="hover:text-sky-600 transition-colors cursor-pointer">
                   AI Ensemble Model
                 </button>
               </li>
               <li>
-                <button onClick={() => setActiveTab('about')} className="hover:text-sky-600 transition-colors">
+                <button onClick={() => setActiveTab('about')} className="hover:text-sky-600 transition-colors cursor-pointer">
                   Sensor Network API
                 </button>
+              </li>
+              <li className="pt-1.5 border-t border-slate-100">
+                {!user ? (
+                  <button
+                    onClick={() => setPortalMode('login')}
+                    className="text-slate-500 hover:text-sky-700 transition-colors flex items-center gap-1.5 font-medium cursor-pointer"
+                    title="Staff & Officer Login"
+                  >
+                    <Shield className="w-3.5 h-3.5 text-sky-600" />
+                    <span>Official Staff Login</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      if (role === 'meteorologist') setPortalMode('meteorologist');
+                      else if (role === 'disaster_manager') setPortalMode('dma');
+                      else if (role === 'administrator') setPortalMode('admin');
+                      else setPortalMode('citizen');
+                    }}
+                    className="text-sky-700 hover:text-sky-900 transition-colors flex items-center gap-1.5 font-bold cursor-pointer"
+                  >
+                    <Shield className="w-3.5 h-3.5 text-sky-600" />
+                    <span>My Operational Portal</span>
+                  </button>
+                )}
               </li>
             </ul>
           </div>

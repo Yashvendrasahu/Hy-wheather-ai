@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { useDisasterManagement } from '../../context/DisasterManagementContext.jsx';
 import { useMeteorologist } from '../../context/MeteorologistContext.jsx';
+import { useAuth } from '../../context/AuthContext.jsx';
 import {
   Shield,
   Radio,
@@ -33,6 +34,7 @@ export default function DMANavbar() {
   } = useDisasterManagement();
 
   const { setPortalMode } = useMeteorologist();
+  const { logout, profile } = useAuth();
 
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -270,9 +272,11 @@ export default function DMANavbar() {
 
                     <div className="pt-2 border-t border-slate-100">
                       <button
-                        onClick={() => {
-                          showToast('Signed out of State EOC terminal session.', 'info');
+                        onClick={async () => {
                           setShowProfileMenu(false);
+                          await logout();
+                          showToast('Signed out of State EOC terminal session.', 'info');
+                          setPortalMode('citizen');
                         }}
                         className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-rose-600 hover:bg-rose-50 transition-colors text-left cursor-pointer"
                       >

@@ -1,5 +1,6 @@
 // src/components/meteorologist/LoginScreen.jsx
 import React, { useState } from 'react';
+import { useAuth } from '../../context/AuthContext.jsx';
 import { useMeteorologist } from '../../context/MeteorologistContext.jsx';
 import {
   Shield,
@@ -13,31 +14,78 @@ import {
   CheckCircle2,
   AlertCircle,
   HelpCircle,
-  Activity
+  Activity,
+  ArrowLeft,
+  Sparkles,
+  KeyRound
 } from 'lucide-react';
 
 export default function LoginScreen() {
-  const { handleLogin, setMetTab, setPortalMode, showToast } = useMeteorologist();
+  const { login, resetPassword, isSupabaseConfigured } = useAuth();
+  const { setMetTab, setPortalMode, showToast } = useMeteorologist();
 
-  const [email, setEmail] = useState('a.sharma.synoptic@imd.gov.in');
-  const [password, setPassword] = useState('Synoptic@IMD2025');
+  const [identifier, setIdentifier] = useState('citizen@weatherai.gov.in');
+  const [password, setPassword] = useState('User@12345');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberWorkstation, setRememberWorkstation] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
   const [lang, setLang] = useState('EN'); // 'EN' | 'HI'
 
-  const handleSubmit = (e) => {
+  // Forgot Password Modal State
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotStatus, setForgotStatus] = useState({ loading: false, sent: false, error: '' });
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!email || !password) {
-      showToast('Please provide your official Scientist ID / Email and password.', 'error');
+    if (!identifier || !password) {
+      setErrorMsg('Please enter your email or official User ID and password.');
       return;
     }
 
     setIsLoading(true);
-    setTimeout(() => {
+    setErrorMsg('');
+
+    try {
+      const result = await login(identifier, password);
+      if (result.success) {
+        if (result.requiresOtp) {
+          showToast('Verification code dispatched to your registered email.', 'info');
+          // Portal handles showing OTP screen
+        } else {
+          showToast('Welcome back to WeatherAI.', 'success');
+          setPortalMode('citizen');
+        }
+      } else {
+        setErrorMsg(result.error || 'Invalid credentials or account inactive.');
+      }
+    } catch (err) {
+      setErrorMsg('A network error occurred. Please check your connection.');
+    } finally {
       setIsLoading(false);
-      handleLogin(email, 'Senior Forecaster · Synoptic Ops');
-    }, 600);
+    }
+  };
+
+  const handleForgotPasswordSubmit = async (e) => {
+    e.preventDefault();
+    if (!forgotEmail) return;
+
+    setForgotStatus({ loading: true, sent: false, error: '' });
+    try {
+      await resetPassword(forgotEmail);
+      setForgotStatus({ loading: false, sent: true, error: '' });
+      showToast('If this email is registered, a password reset link has been dispatched.', 'info');
+    } catch (err) {
+      setForgotStatus({ loading: false, sent: false, error: 'Could not send reset link. Please try again.' });
+    }
+  };
+
+  // Quick Preset Helper for testing demo accounts easily
+  const setDemoAccount = (emailVal, passVal) => {
+    setIdentifier(emailVal);
+    setPassword(passVal);
+    setErrorMsg('');
   };
 
   return (
@@ -61,8 +109,6 @@ export default function LoginScreen() {
           <circle cx="50%" cy="45%" r="580" fill="none" stroke="#F1F5F9" strokeWidth="1" />
           <text x="5%" y="22%" fill="#94A3B8" fontSize="11" fontFamily="monospace">28° 38' N / 77° 13' E (HQ-NEW DELHI)</text>
           <text x="82%" y="22%" fill="#94A3B8" fontSize="11" fontFamily="monospace">RADAR ISOBAR 1013.25 hPa</text>
-          <text x="5%" y="80%" fill="#94A3B8" fontSize="11" fontFamily="monospace">NCMRWF HIGH-RESOLUTION ENSEMBLE</text>
-          <text x="82%" y="80%" fill="#94A3B8" fontSize="11" fontFamily="monospace">SATELLITE DOWNLINK STABLE</text>
         </svg>
       </div>
 
@@ -79,11 +125,11 @@ export default function LoginScreen() {
                   Mausam Suraksha
                 </span>
                 <span className="text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-sky-100 text-sky-800 border border-sky-200 font-mono">
-                  PORTAL
+                  SUPABASE AUTH
                 </span>
               </div>
               <p className="text-[10px] font-semibold text-slate-500 hidden sm:block">
-                WeatherAI Researcher & Meteorologist Network
+                National WeatherAI & Civic Disaster Operations Network
               </p>
             </div>
           </div>
@@ -91,14 +137,17 @@ export default function LoginScreen() {
           <div className="flex items-center gap-3 sm:gap-4">
             <button
               onClick={() => setPortalMode('citizen')}
-              className="flex items-center gap-1 text-xs font-bold text-sky-700 hover:text-sky-900 transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 text-xs font-bold text-sky-700 hover:text-sky-900 transition-colors cursor-pointer shrink-0"
+              title="Return to Public Portal"
             >
-              <span>← Public Citizen Portal</span>
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Back to Public Citizen Portal</span>
+              <span className="sm:hidden">Public Portal</span>
             </button>
 
             <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700">
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-              <span>IMD & MoES Telemetry Verified</span>
+              <span>{isSupabaseConfigured ? 'Live Supabase Connected' : 'Supabase Enclave Active'}</span>
             </div>
 
             {/* Language Switch */}
@@ -130,9 +179,9 @@ export default function LoginScreen() {
           
           {/* Top Badge & Icon */}
           <div className="text-center space-y-3">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Authorized Meteorologist Access Only</span>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-50 border border-sky-200 text-sky-800 text-xs font-bold">
+              <KeyRound className="w-3.5 h-3.5 text-sky-600" />
+              <span>Unified Role-Based Authentication</span>
             </div>
 
             <div className="w-14 h-14 rounded-2xl bg-sky-50 border border-sky-100 text-sky-700 flex items-center justify-center mx-auto shadow-xs">
@@ -142,43 +191,99 @@ export default function LoginScreen() {
             <div>
               <h1 className="text-2xl font-black text-slate-900 tracking-tight">Login</h1>
               <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-xs mx-auto">
-                Access scientific forecast telemetry, ensemble models, and national hazard alert tools.
+                Sign in with your registered email or official government user ID.
               </p>
             </div>
           </div>
 
+          {/* Quick Demo Role Selector Pills for Evaluation */}
+          <div className="space-y-1.5 bg-slate-50 p-2.5 rounded-2xl border border-slate-200/80">
+            <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1 justify-between">
+              <span>Quick Test Accounts</span>
+              <span className="text-[10px] text-sky-600 font-mono">1-Click Fill</span>
+            </div>
+            <div className="grid grid-cols-2 gap-1.5 text-[11px] font-bold">
+              <button
+                type="button"
+                onClick={() => setDemoAccount('citizen@weatherai.gov.in', 'User@12345')}
+                className="px-2 py-1.5 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-left transition-colors cursor-pointer"
+              >
+                <div className="text-slate-900">Citizen User</div>
+                <div className="text-[10px] text-slate-400 font-normal">Immediate login</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setDemoAccount('a.sharma.synoptic@imd.gov.in', 'Synoptic@IMD2025')}
+                className="px-2 py-1.5 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-left transition-colors cursor-pointer"
+              >
+                <div className="text-sky-700">Meteorologist</div>
+                <div className="text-[10px] text-slate-400 font-normal">Requires 2FA OTP</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setDemoAccount('v.rathore@rajasthan.gov.in', 'Disaster@EOC2025')}
+                className="px-2 py-1.5 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-left transition-colors cursor-pointer"
+              >
+                <div className="text-rose-700">Disaster EOC</div>
+                <div className="text-[10px] text-slate-400 font-normal">Requires 2FA OTP</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setDemoAccount('r.verma@gov.nic.in', 'Admin@SEC2025')}
+                className="px-2 py-1.5 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-left transition-colors cursor-pointer"
+              >
+                <div className="text-indigo-700">Admin SEC-01</div>
+                <div className="text-[10px] text-slate-400 font-normal">Requires 2FA OTP</div>
+              </button>
+            </div>
+          </div>
+
+          {/* Error Message Alert */}
+          {errorMsg && (
+            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold flex items-center gap-2 animate-shake">
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+              <span>{errorMsg}</span>
+            </div>
+          )}
+
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             
-            {/* Official Email / Scientist ID */}
+            {/* Official Email / User ID */}
             <div className="space-y-1.5">
               <label className="block text-xs font-bold text-slate-700">
-                Official Email / Scientist ID
+                Email Address or Official User ID
               </label>
               <div className="relative">
                 <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="e.g. rahul@imd.gov.in or NCMRWF ID"
+                  value={identifier}
+                  onChange={(e) => {
+                    setIdentifier(e.target.value);
+                    setErrorMsg('');
+                  }}
+                  placeholder="e.g. citizen@weatherai.gov.in or MET-IMD-01"
                   className="w-full pl-10 pr-4 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500 font-medium transition-all"
                   required
                 />
               </div>
             </div>
 
-            {/* Security Key / Password */}
+            {/* Password */}
             <div className="space-y-1.5">
               <label className="block text-xs font-bold text-slate-700">
-                Security Key / Password
+                Password
               </label>
               <div className="relative">
                 <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setErrorMsg('');
+                  }}
                   placeholder="••••••••••••"
                   className="w-full pl-10 pr-10 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500 font-mono transition-all"
                   required
@@ -200,14 +305,17 @@ export default function LoginScreen() {
                   type="checkbox"
                   checked={rememberWorkstation}
                   onChange={(e) => setRememberWorkstation(e.target.checked)}
-                  className="w-4 h-4 rounded text-sky-600 focus:ring-sky-500 border-slate-300 rounded-xs"
+                  className="w-4 h-4 rounded text-sky-600 focus:ring-sky-500 border-slate-300"
                 />
-                <span>Remember this workstation</span>
+                <span>Remember session</span>
               </label>
 
               <button
                 type="button"
-                onClick={() => showToast('Password reset link dispatched to your official gov.in address.', 'info')}
+                onClick={() => {
+                  setForgotEmail(identifier.includes('@') ? identifier : '');
+                  setShowForgotModal(true);
+                }}
                 className="font-bold text-sky-700 hover:text-sky-900 transition-colors cursor-pointer"
               >
                 Forgot password?
@@ -223,11 +331,11 @@ export default function LoginScreen() {
               {isLoading ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  <span>Authenticating via NIC Gateway...</span>
+                  <span>Authenticating with Supabase...</span>
                 </>
               ) : (
                 <>
-                  <span>Sign In to Terminal</span>
+                  <span>Sign In</span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
@@ -236,12 +344,13 @@ export default function LoginScreen() {
 
           {/* Switch to Signup */}
           <div className="text-center pt-2 text-xs text-slate-500">
-            <span>Haven't account ? </span>
+            <span>Don't have an account? </span>
             <button
-              onClick={() => setMetTab('signup')}
+              type="button"
+              onClick={() => setPortalMode('signup')}
               className="font-bold text-sky-700 hover:text-sky-900 hover:underline transition-colors cursor-pointer"
             >
-              SignUpHere
+              Sign Up for Free
             </button>
           </div>
 
@@ -249,30 +358,87 @@ export default function LoginScreen() {
           <div className="pt-3 border-t border-slate-100 text-center space-y-1">
             <div className="flex items-center justify-center gap-1.5 text-[11px] font-bold text-slate-700">
               <Shield className="w-3.5 h-3.5 text-sky-600" />
-              <span className="uppercase tracking-wider">256-Bit Telemetry Encryption</span>
+              <span className="uppercase tracking-wider">Supabase Row-Level Security</span>
             </div>
             <p className="text-[10px] text-slate-400 leading-tight">
-              System activity is strictly audited and logged for national disaster mitigation and weather protection integrity.
+              Roles, data queries and emergency broadcast channels are verified on Supabase PostgreSQL with encrypted sessions.
             </p>
           </div>
 
         </div>
       </main>
 
-      {/* Bottom Live Radar Grid Status Pill */}
-      <div className="relative z-10 max-w-md mx-auto text-center pb-6 px-4">
-        <div className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600 bg-white/80 backdrop-blur-xs px-4 py-1.5 rounded-full border border-slate-200 shadow-2xs">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span>National Radar Grid: <strong>Operational (39/39 Stations)</strong></span>
-          <span className="text-slate-300">·</span>
-          <button
-            onClick={() => showToast('All 39 S-band & C-band Doppler Radars Operational (0% Packet Loss)', 'success')}
-            className="text-sky-700 font-bold hover:underline cursor-pointer"
-          >
-            System Status ↗
-          </button>
+      {/* Forgot Password Modal */}
+      {showForgotModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-fade-in">
+          <div className="w-full max-w-sm bg-white rounded-2xl p-6 shadow-2xl border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-slate-900 text-base">Reset Password</h3>
+              <button
+                onClick={() => setShowForgotModal(false)}
+                className="text-slate-400 hover:text-slate-600 text-xs font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-500">
+              Enter your registered official email address. Supabase Auth will send a secure password reset link.
+            </p>
+
+            {forgotStatus.sent ? (
+              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 font-semibold space-y-2">
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <span>Password reset email dispatched.</span>
+                </div>
+                <p className="text-[11px] text-emerald-700 font-normal">
+                  Check your inbox for instructions to update your password credentials.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowForgotModal(false)}
+                  className="w-full py-2 bg-emerald-700 text-white rounded-lg text-xs font-bold hover:bg-emerald-800 transition-colors"
+                >
+                  Return to Login
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleForgotPasswordSubmit} className="space-y-3">
+                <input
+                  type="email"
+                  value={forgotEmail}
+                  onChange={(e) => setForgotEmail(e.target.value)}
+                  placeholder="e.g. officer@imd.gov.in"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  required
+                />
+
+                {forgotStatus.error && (
+                  <p className="text-xs text-rose-600 font-semibold">{forgotStatus.error}</p>
+                )}
+
+                <div className="flex items-center justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotModal(false)}
+                    className="px-3 py-1.5 text-xs text-slate-600 hover:text-slate-800"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={forgotStatus.loading}
+                    className="px-4 py-2 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-slate-800 transition-colors disabled:opacity-60"
+                  >
+                    {forgotStatus.loading ? 'Sending Link...' : 'Send Reset Link'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Footer */}
       <footer className="relative z-10 w-full bg-white border-t border-slate-200 py-6 px-4 sm:px-8 text-xs text-slate-500">
@@ -280,14 +446,13 @@ export default function LoginScreen() {
           <div>
             <div className="font-black text-slate-900">Mausam Suraksha</div>
             <p className="text-[11px] text-slate-400">
-              © 2025 National Meteorological Service & Disaster Mitigation Authority. Government of India. All rights reserved. Authorized scientific access only.
+              © 2025 National Meteorological Service & Disaster Mitigation Authority. Government of India.
             </p>
           </div>
 
           <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs font-semibold text-slate-600">
             <button onClick={() => showToast('Public Safety Charter', 'info')} className="hover:text-sky-700 cursor-pointer">Public Safety Charter</button>
             <button onClick={() => showToast('National Radar Network Active', 'info')} className="hover:text-sky-700 cursor-pointer">National Radar Network</button>
-            <button onClick={() => showToast('Disaster Liaison Hotline: +91 11 2461 8241', 'info')} className="hover:text-sky-700 cursor-pointer">Disaster Control Liaison</button>
             <button onClick={() => showToast('Security Protocols Enforced', 'info')} className="hover:text-sky-700 cursor-pointer">Security Protocols</button>
             <span className="text-slate-900 font-bold">Helpdesk: 1800-180-1717</span>
           </div>

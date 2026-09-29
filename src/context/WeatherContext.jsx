@@ -14,7 +14,8 @@ import {
 } from '../services/moesWeatherApi.js';
 import {
   fetchLiveWeatherAndAI,
-  fetchWeatherForecast as fetchWeatherForecastService
+  fetchWeatherForecast as fetchWeatherForecastService,
+  detectUserCoordinates
 } from '../services/liveWeatherService.js';
 
 const WeatherContext = createContext(null);
@@ -41,7 +42,13 @@ export function WeatherProvider({ children }) {
 
   // --- Dynamic Real Data & MoES AI Engine Backend States ---
   const [isDynamicLoading, setIsDynamicLoading] = useState(true);
-  const [currentLocation, setCurrentLocation] = useState(LOCATIONS[0]);
+  const [currentLocation, setCurrentLocation] = useState(() => {
+    try {
+      const saved = localStorage.getItem('weatherai_user_detected_location');
+      if (saved) return JSON.parse(saved);
+    } catch (_) {}
+    return LOCATIONS[0];
+  });
   const [hourlyForecast, setHourlyForecast] = useState(STATIC_HOURLY);
   const [sevenDayForecast, setSevenDayForecast] = useState(STATIC_SEVEN_DAY);
   const [dynamicAlerts, setDynamicAlerts] = useState(STATIC_ALERTS);
@@ -247,6 +254,12 @@ export function WeatherProvider({ children }) {
           status: data.moesResult?.precipitation?.alert === 'RED' ? 'Cloudburst Hazard' : data.location.condition
         });
 
+        if (data.location) {
+          try {
+            localStorage.setItem('weatherai_user_detected_location', JSON.stringify(data.location));
+          } catch (_) {}
+        }
+
         if (showNotification) {
           showToast(`Live weather loaded for ${data.location.fullName}`, 'success');
         }
@@ -265,50 +278,56 @@ export function WeatherProvider({ children }) {
     return fetchWeatherForecast(lat, lon, DEFAULT_CLIMATIC_ZONE, knownName, showNotification);
   }, [fetchWeatherForecast]);
 
-  // Use browser's Geolocation API to detect user's current latitude & longitude
-  const detectUserLocation = useCallback(() => {
+  // Robust location detector:
+  // 1. Browser Geolocation (high-accuracy GPS)
+  // 2. If geolocation is denied/timeout/iframe policy: IP Geolocation + OpenStreetMap Nominatim Reverse Geocoding
+  // 3. Fallback to cached location or capital
+  const detectUserLocation = useCallback(async (isUserManualClick = false) => {
     setGpsState('detecting');
-    showToast('Acquiring your GPS coordinates...', 'info');
+    if (isUserManualClick) {
+      showToast('Detecting location via GPS & OpenStreetMap...', 'info');
+    }
 
-    if (typeof window !== 'undefined' && 'geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const { latitude, longitude } = position.coords;
-          setGpsState('active');
-          // Automatically trigger fetchWeatherForecast function using detected coordinates & default climatic_zone
-          await fetchWeatherForecast(latitude, longitude, DEFAULT_CLIMATIC_ZONE, null, true);
-        },
-        (error) => {
-          console.warn('Geolocation denied or error:', error?.message);
-          setGpsState('prompt');
-          showToast('Location permission not granted. Loaded default city (Indore).', 'info');
-          // Fallback to default coordinates with default climatic_zone
-          fetchWeatherForecast(22.7196, 75.8577, DEFAULT_CLIMATIC_ZONE, {
-            name: 'Indore',
-            region: 'Madhya Pradesh',
-            country: 'India',
-            fullName: 'Indore, Madhya Pradesh'
-          }, false);
-        },
-        {
-          timeout: 10000,
-          enableHighAccuracy: true,
-          maximumAge: 60000
-        }
+    try {
+      const coords = await detectUserCoordinates();
+      setGpsState('active');
+
+      let knownName = null;
+      if (coords.cityHint) {
+        knownName = {
+          name: coords.cityHint,
+          region: coords.regionHint || '',
+          country: coords.countryHint || 'India',
+          fullName: `${coords.cityHint}${coords.regionHint ? `, ${coords.regionHint}` : ''}${coords.countryHint ? `, ${coords.countryHint}` : ''}`
+        };
+      }
+
+      const weatherResult = await fetchWeatherForecast(
+        coords.latitude,
+        coords.longitude,
+        DEFAULT_CLIMATIC_ZONE,
+        knownName,
+        isUserManualClick
       );
-    } else {
-      setGpsState('error');
-      showToast('Geolocation is not supported by your browser.', 'error');
-      fetchWeatherForecast(22.7196, 75.8577, DEFAULT_CLIMATIC_ZONE, {
-        name: 'Indore',
-        region: 'Madhya Pradesh',
+
+      if (weatherResult?.location) {
+        try {
+          localStorage.setItem('weatherai_user_detected_location', JSON.stringify(weatherResult.location));
+        } catch (_) {}
+      }
+    } catch (err) {
+      console.warn('Location detection fallback triggered:', err);
+      setGpsState('prompt');
+      await fetchWeatherForecast(28.6139, 77.2090, DEFAULT_CLIMATIC_ZONE, {
+        name: 'New Delhi',
+        region: 'Delhi',
         country: 'India',
-        fullName: 'Indore, Madhya Pradesh'
+        fullName: 'New Delhi, Delhi, India'
       }, false);
     }
   }, [fetchWeatherForecast]);
 
-  // Initial load: ping backend and detect user's current location
+  // Initial load: ping backend and detect user's current location by default
   useEffect(() => {
     let isMounted = true;
     const init = async () => {
@@ -329,9 +348,9 @@ export function WeatherProvider({ children }) {
         console.warn('Backend ping silent error:', e);
       }
 
-      // 2. Automatically fetch user location & live weather data
+      // 2. Automatically fetch user location & live weather data by default on startup
       if (isMounted) {
-        detectUserLocation();
+        detectUserLocation(false);
       }
     };
 
