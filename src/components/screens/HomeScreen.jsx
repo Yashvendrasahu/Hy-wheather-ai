@@ -6,7 +6,7 @@ import {
   SEVEN_DAY_FORECAST,
   MET_STATION_TELEMETRY
 } from '../../data/weatherData.js';
-import InteractiveRadarCanvas from '../map/InteractiveRadarCanvas.jsx';
+import RealLeafletRadarMap from '../map/RealLeafletRadarMap.jsx';
 import TopAlertRibbon from '../moes/TopAlertRibbon.jsx';
 import {
   Sparkles,
@@ -605,25 +605,9 @@ export default function HomeScreen() {
               </span>
             </div>
 
-            {/* Interactive Canvas */}
+            {/* Interactive Real Doppler Radar Map */}
             <div className="mt-3">
-              <div className="flex items-center gap-1.5 mb-2">
-                {['rain', 'clouds', 'wind'].map((lyr) => (
-                  <button
-                    key={lyr}
-                    onClick={() => setMapLayer(lyr)}
-                    className={`px-2.5 py-1 text-xs font-semibold rounded-lg capitalize transition-colors cursor-pointer ${
-                      mapLayer === lyr
-                        ? 'bg-slate-900 text-white'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                    }`}
-                  >
-                    {lyr}
-                  </button>
-                ))}
-              </div>
-
-              <InteractiveRadarCanvas isCompact={true} height={260} />
+              <RealLeafletRadarMap isCompact={true} height={300} />
             </div>
 
             {/* Time player scrubber bar */}

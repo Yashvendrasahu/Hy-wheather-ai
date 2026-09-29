@@ -4,6 +4,7 @@ import { useDisasterManagement } from '../../context/DisasterManagementContext.j
 import {
   POTENTIAL_IMPACT_SUMMARY
 } from '../../data/disasterManagementData.js';
+import RealLeafletRadarMap from '../map/RealLeafletRadarMap.jsx';
 import {
   MapPin,
   Clock,
@@ -52,6 +53,7 @@ export default function DMARiskMapScreen() {
   } = useDisasterManagement();
 
   const [regionFilter, setRegionFilter] = useState('India (Central & Western Corridor)');
+  const [dmaMapViewMode, setDmaMapViewMode] = useState('radar'); // 'radar' | 'sectors'
   const [isSyncing, setIsSyncing] = useState(false);
 
   const handleRefresh = async () => {
@@ -200,21 +202,49 @@ export default function DMARiskMapScreen() {
         {/* Left: GIS Vector Polygon Map View (7 cols) */}
         <div className="lg:col-span-7 bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/90 shadow-2xs space-y-4">
           
-          <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-            <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-black uppercase font-mono">
-                Basin Impact Drainage Hatching: {showDrainageHatching ? 'ACTIVE' : 'OFF'}
-              </span>
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-100">
+            <div className="flex items-center gap-1.5 p-0.5 bg-slate-100 rounded-xl border border-slate-200 text-xs font-bold text-slate-700">
+              <button
+                type="button"
+                onClick={() => setDmaMapViewMode('radar')}
+                className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                  dmaMapViewMode === 'radar'
+                    ? 'bg-slate-900 text-white shadow-2xs font-extrabold'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Live Doppler Radar Map
+              </button>
+              <button
+                type="button"
+                onClick={() => setDmaMapViewMode('sectors')}
+                className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                  dmaMapViewMode === 'sectors'
+                    ? 'bg-slate-900 text-white shadow-2xs font-extrabold'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Civil GIS Sectors
+              </button>
             </div>
-            <button
-              onClick={() => setShowDrainageHatching(!showDrainageHatching)}
-              className="text-[11px] text-sky-700 hover:underline font-bold cursor-pointer"
-            >
-              Toggle Drainage Overlay
-            </button>
+
+            {dmaMapViewMode === 'sectors' && (
+              <button
+                type="button"
+                onClick={() => setShowDrainageHatching(!showDrainageHatching)}
+                className="text-[11px] text-sky-700 hover:underline font-bold cursor-pointer"
+              >
+                {showDrainageHatching ? 'Drainage Hatching: ON' : 'Drainage Hatching: OFF'}
+              </button>
+            )}
           </div>
 
-          {/* Interactive GIS Visual Container */}
+          {dmaMapViewMode === 'radar' ? (
+            <div className="rounded-2xl overflow-hidden shadow-inner">
+              <RealLeafletRadarMap height={440} />
+            </div>
+          ) : (
+          /* Interactive GIS Visual Container */
           <div className="relative w-full h-96 sm:h-[420px] rounded-2xl bg-gradient-to-br from-slate-50 via-slate-100 to-sky-50 border border-slate-200 overflow-hidden flex items-center justify-center select-none">
             
             {/* Topographic Background */}
@@ -356,6 +386,7 @@ export default function DMARiskMapScreen() {
               </button>
             </div>
           </div>
+          )}
 
           {/* GIS Legend Row */}
           <div className="flex flex-wrap items-center justify-between gap-3 text-xs font-bold pt-2 border-t border-slate-100 text-slate-600">

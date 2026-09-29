@@ -242,10 +242,6 @@ function AppContent() {
   const { portalMode } = useMeteorologist();
   const { isLoading, otpState } = useAuth();
 
-  if (isLoading) {
-    return <AuthLoadingScreen />;
-  }
-
   // If operational 2FA OTP verification is required
   if (otpState.pending || portalMode === 'otp') {
     return (
@@ -265,9 +261,14 @@ function AppContent() {
     return <UserSignupScreen />;
   }
 
-  // Public / Citizen Portal
+  // Public / Citizen Portal (Home screen loads instantly by default)
   if (portalMode === 'citizen') {
     return <CitizenPortal />;
+  }
+
+  // For protected official consoles, show loading spinner while verifying token session
+  if (isLoading) {
+    return <AuthLoadingScreen />;
   }
 
   // Meteorologist Synoptic Desk (Protected RoleRoute)

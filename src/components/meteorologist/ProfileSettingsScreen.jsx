@@ -71,7 +71,7 @@ export default function ProfileSettingsScreen() {
     autoAssimilationSync: true,
     autoTriggerBulletins: true,
     radarColorPalette: 'imd-16', // 'imd-16' | 'nexrad' | 'spectral'
-    mapTileStyle: 'carto-light', // 'carto-light' | 'osm-standard' | 'dark-radar' | 'satellite'
+    mapTileStyle: 'osm-standard', // 'osm-standard' | 'esri-street' | 'dark-radar' | 'satellite'
     precipThresholdMm: 50,
     windGustThresholdKmh: 60,
     capeThresholdJkg: 2000,

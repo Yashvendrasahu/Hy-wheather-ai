@@ -10,8 +10,8 @@ import { fetchSynopticForecast } from '../services/synopticService.js';
 const MeteorologistContext = createContext(null);
 
 export function MeteorologistProvider({ children }) {
-  // Portal mode: 'dma' | 'meteorologist' | 'citizen'
-  const [portalMode, setPortalMode] = useState('dma');
+  // Portal mode: 'citizen' | 'meteorologist' | 'dma' | 'admin'
+  const [portalMode, setPortalMode] = useState('citizen');
 
   // Meteorologist page tabs: 'dashboard' | 'forecast-analysis' | 'weather-events' | 'analytics' | 'profile-settings' | 'login' | 'signup'
   const [metTab, setMetTab] = useState('dashboard');
