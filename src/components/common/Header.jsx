@@ -1,7 +1,8 @@
 // src/components/common/Header.jsx
 import React from 'react';
 import { useWeather } from '../../context/WeatherContext.jsx';
-import { MapPin, Bell, CloudRain, User, Sparkles, AlertTriangle, ShieldCheck, X, Navigation } from 'lucide-react';
+import { useMeteorologist } from '../../context/MeteorologistContext.jsx';
+import { MapPin, Bell, CloudRain, User, Sparkles, AlertTriangle, ShieldCheck, X, Navigation, Shield } from 'lucide-react';
 import { ALERTS_DATA } from '../../data/weatherData.js';
 
 export default function Header() {
@@ -20,6 +21,8 @@ export default function Header() {
     setActiveModalAlert,
     setShowSafetyModal
   } = useWeather();
+
+  const { setPortalMode, setMetTab } = useMeteorologist();
 
   const activeAlerts = (dynamicAlerts || []).filter(a => a.status === 'active');
 
@@ -211,6 +214,46 @@ export default function Header() {
               </div>
             )}
           </div>
+
+          {/* Disaster Management Authority Switcher Button */}
+          <button
+            onClick={() => {
+              setPortalMode('dma');
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-rose-900 hover:bg-rose-800 text-white text-xs font-black shadow-xs transition-all cursor-pointer border border-rose-700"
+            title="Open Disaster Management Authority (State EOC)"
+          >
+            <Shield className="w-3.5 h-3.5 text-rose-300" />
+            <span className="hidden sm:inline">Disaster EOC</span>
+            <span className="sm:hidden font-mono">EOC</span>
+          </button>
+
+          {/* Meteorologist / Researcher Portal Switcher Button */}
+          <button
+            onClick={() => {
+              setPortalMode('meteorologist');
+              setMetTab('dashboard');
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900 hover:bg-slate-800 text-sky-400 hover:text-sky-300 text-xs font-black shadow-xs transition-all cursor-pointer border border-slate-700"
+            title="Open Meteorologist / Researcher Portal"
+          >
+            <Shield className="w-3.5 h-3.5 text-sky-400" />
+            <span className="hidden sm:inline">Meteorologist</span>
+            <span className="sm:hidden font-mono">MET</span>
+          </button>
+
+          {/* Admin Enclave Switcher Button */}
+          <button
+            onClick={() => {
+              setPortalMode('admin');
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-950 hover:bg-indigo-900 text-indigo-200 hover:text-white text-xs font-black shadow-xs transition-all cursor-pointer border border-indigo-700"
+            title="Open WeatherAI System Administrator Console"
+          >
+            <Shield className="w-3.5 h-3.5 text-indigo-400" />
+            <span className="hidden sm:inline">Admin SEC-01</span>
+            <span className="sm:hidden font-mono">ADMIN</span>
+          </button>
 
           {/* User Profile Avatar */}
           <button
