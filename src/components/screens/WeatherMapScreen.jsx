@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useWeather } from '../../context/WeatherContext.jsx';
 import { REGIONAL_RADAR_POINTS, ALERTS_DATA } from '../../data/weatherData.js';
 import RealLeafletRadarMap from '../map/RealLeafletRadarMap.jsx';
+import NationalSynopticRainAlertMap from '../alerts/NationalSynopticRainAlertMap.jsx';
 import {
   Sparkles,
   Navigation,
@@ -49,6 +50,7 @@ export default function WeatherMapScreen() {
 
   const [mapSearchQuery, setMapSearchQuery] = useState('');
   const [showPointCard, setShowPointCard] = useState(true);
+  const [mapViewType, setMapViewType] = useState('radar'); // 'radar' | 'national'
 
   const timeTicks = [
     { step: 0, label: '-1h' },
@@ -131,7 +133,42 @@ export default function WeatherMapScreen() {
         </div>
       </div>
 
-      {/* Main Real Map Container Card */}
+      {/* Map Mode Switcher: Doppler Street Radar vs National Severe Alert Map */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-1.5 p-1 bg-white rounded-2xl border border-slate-200/90 shadow-2xs">
+          <button
+            onClick={() => setMapViewType('radar')}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              mapViewType === 'radar'
+                ? 'bg-slate-900 text-white shadow-xs'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <CloudRain className="w-4 h-4 text-sky-400" />
+            <span>Doppler Street Radar (स्ट्रीट मैप)</span>
+          </button>
+          <button
+            onClick={() => setMapViewType('national')}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              mapViewType === 'national'
+                ? 'bg-rose-600 text-white shadow-xs'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <Wind className="w-4 h-4 text-amber-300" />
+            <span>National Severe Rain & Cyclone Map (अखिल भारतीय मैप)</span>
+          </button>
+        </div>
+
+        <div className="text-xs font-bold text-slate-500 font-mono hidden md:block">
+          {mapViewType === 'radar' ? 'Radar: 100% Vector Tiles' : 'Synoptic: IMD & Cyclone Alerts'}
+        </div>
+      </div>
+
+      {mapViewType === 'national' ? (
+        <NationalSynopticRainAlertMap />
+      ) : (
+      /* Main Real Map Container Card */
       <div className="bg-white rounded-3xl p-4 sm:p-6 border border-slate-200/80 shadow-xs space-y-4">
         {/* Layer Switches Bar */}
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -332,6 +369,7 @@ export default function WeatherMapScreen() {
           </div>
         </div>
       </div>
+      )}
 
       {/* AI Ensemble Trajectory Insight Card */}
       <div className="bg-gradient-to-r from-slate-900 to-sky-950 text-white rounded-3xl p-6 border border-sky-800/40 shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4">

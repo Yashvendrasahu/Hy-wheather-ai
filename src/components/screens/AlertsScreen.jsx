@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { useWeather } from '../../context/WeatherContext.jsx';
 import { ALERTS_DATA, EMERGENCY_HELPLINES } from '../../data/weatherData.js';
+import NationalSynopticRainAlertMap from '../alerts/NationalSynopticRainAlertMap.jsx';
 import {
   AlertTriangle,
   Shield,
@@ -103,6 +104,9 @@ export default function AlertsScreen() {
           </button>
         </div>
       </div>
+
+      {/* National Synoptic Severe Rain & Cyclone Map (अखिल भारतीय वर्षा अलर्ट) */}
+      <NationalSynopticRainAlertMap />
 
       {/* Filter Tabs & Warnings Toggle Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-2 rounded-2xl border border-slate-200">
