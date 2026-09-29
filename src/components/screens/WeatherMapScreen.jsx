@@ -42,6 +42,7 @@ export default function WeatherMapScreen() {
     loadLocationByCoords,
     setActiveTab,
     setActiveModalAlert,
+    moesPayload,
     moesResult,
     showToast
   } = useWeather();
@@ -207,10 +208,14 @@ export default function WeatherMapScreen() {
               <div className="mt-3 flex items-center justify-between">
                 <div>
                   <div className="text-3xl font-extrabold text-slate-900 font-mono">
-                    {formatTemp(selectedMapPoint.tempC ?? selectedMapPoint.temp ?? 28)}
+                    {formatTemp(selectedMapPoint.name === currentLocation.name || selectedMapPoint.id === currentLocation.id
+                      ? (moesResult?.temperature?.blended_2m_celsius ?? selectedMapPoint.tempC ?? 28)
+                      : (selectedMapPoint.tempC ?? selectedMapPoint.temp ?? 28))}
                   </div>
                   <div className="text-xs font-semibold text-slate-600 mt-0.5">
-                    {selectedMapPoint.status || selectedMapPoint.condition || 'Live Observation'}
+                    {(moesResult?.precipitation?.quantiles_mm?.p50 > 10.0 && (selectedMapPoint.name === currentLocation.name || selectedMapPoint.id === currentLocation.id))
+                      ? "Scattered Convective Showers"
+                      : (selectedMapPoint.status || selectedMapPoint.condition || 'Live Observation')}
                   </div>
                 </div>
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
@@ -226,23 +231,39 @@ export default function WeatherMapScreen() {
               <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-slate-100 text-xs">
                 <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">
                   <span className="text-slate-400 block text-[10px] font-semibold">Precipitation Risk</span>
-                  <strong className="text-sky-700 font-mono text-sm">{selectedMapPoint.rainProb ?? 20}%</strong>
+                  <strong className="text-sky-700 font-mono text-sm">
+                    {selectedMapPoint.name === currentLocation.name || selectedMapPoint.id === currentLocation.id
+                      ? `${Math.min(95, Math.round((moesResult?.precipitation?.nwp_bust_probability ?? 0.428) * 100 + (moesResult?.precipitation?.quantiles_mm?.p50 ?? 19.8) * 2))}%`
+                      : `${selectedMapPoint.rainProb ?? 20}%`}
+                  </strong>
                 </div>
                 <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">
                   <span className="text-slate-400 block text-[10px] font-semibold">Wind Vector</span>
-                  <strong className="text-slate-800 text-xs">{selectedMapPoint.windSpeed ? `${selectedMapPoint.windSpeed} km/h` : selectedMapPoint.windVector || '15 km/h NW'}</strong>
+                  <strong className="text-slate-800 text-xs">
+                    {selectedMapPoint.name === currentLocation.name || selectedMapPoint.id === currentLocation.id
+                      ? `${moesResult?.wind?.sustained_speed_kmh ?? 17} km/h ${currentLocation.windDirection || 'NW'}`
+                      : (selectedMapPoint.windSpeed ? `${selectedMapPoint.windSpeed} km/h` : selectedMapPoint.windVector || '15 km/h NW')}
+                  </strong>
                 </div>
                 <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">
-                  <span className="text-slate-400 block text-[10px] font-semibold">Humidity</span>
-                  <strong className="text-slate-800 text-xs">{selectedMapPoint.humidity ? `${selectedMapPoint.humidity}%` : '68%'}</strong>
+                  <span className="text-slate-400 block text-[10px] font-semibold">Pressure (MSL)</span>
+                  <strong className="text-slate-800 text-xs font-mono">
+                    {selectedMapPoint.name === currentLocation.name || selectedMapPoint.id === currentLocation.id
+                      ? `${moesPayload?.mslp ?? 1012} hPa`
+                      : `${selectedMapPoint.pressure || 1012} hPa`}
+                  </strong>
                 </div>
                 <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">
                   <span className="text-slate-400 block text-[10px] font-semibold">Risk Classification</span>
                   <strong className={`text-xs font-bold ${
-                    selectedMapPoint.baseZone === 'RED' ? 'text-red-600' :
-                    selectedMapPoint.baseZone === 'ORANGE' ? 'text-orange-600' :
-                    selectedMapPoint.baseZone === 'YELLOW' ? 'text-amber-600' : 'text-emerald-600'
-                  }`}>{selectedMapPoint.baseZone || 'NORMAL'}</strong>
+                    (selectedMapPoint.name === currentLocation.name || selectedMapPoint.id === currentLocation.id)
+                      ? (moesResult?.precipitation?.alert === 'RED' ? 'text-red-600' : moesResult?.precipitation?.alert === 'ORANGE' ? 'text-orange-600' : moesResult?.precipitation?.alert === 'YELLOW' ? 'text-amber-600' : 'text-emerald-600')
+                      : (selectedMapPoint.baseZone === 'RED' ? 'text-red-600' : selectedMapPoint.baseZone === 'ORANGE' ? 'text-orange-600' : selectedMapPoint.baseZone === 'YELLOW' ? 'text-amber-600' : 'text-emerald-600')
+                  }`}>
+                    {(selectedMapPoint.name === currentLocation.name || selectedMapPoint.id === currentLocation.id)
+                      ? (moesResult?.precipitation?.alert || 'ORANGE')
+                      : (selectedMapPoint.baseZone || 'NORMAL')}
+                  </strong>
                 </div>
               </div>
 

@@ -40,6 +40,15 @@ export default function AlertsScreen() {
   const [expandedGusty, setExpandedGusty] = useState(false);
   const [showArchived, setShowArchived] = useState(true);
 
+  // Dynamic values mapped from live FastAPI ML backend
+  const alertLevel = moesResult?.precipitation?.alert || 'ORANGE';
+  const p50 = moesResult?.precipitation?.quantiles_mm?.p50 ?? 0;
+  const p90 = moesResult?.precipitation?.quantiles_mm?.p90 ?? 0;
+  const isBustWarning = moesResult?.precipitation?.is_bust_warning ?? false;
+  const conformalCoverage = moesResult?.precipitation?.conformal_coverage || '86.75% Guaranteed';
+  const sustainedWind = moesResult?.wind?.sustained_speed_kmh ?? 17;
+  const gustWind = moesResult?.wind?.gust_ceiling_p90_kmh ?? 26.4;
+
   const baseAlerts = dynamicAlerts && dynamicAlerts.length > 0 ? dynamicAlerts : ALERTS_DATA;
 
   // Filter alerts based on active tab and toggle
@@ -138,41 +147,66 @@ export default function AlertsScreen() {
       </div>
 
       {/* Summary Amber/Yellow Banner */}
-      <div className="bg-amber-50/80 rounded-3xl p-6 border border-amber-200/90 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+      <div className={`rounded-3xl p-6 border shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-6 ${
+        alertLevel === 'RED'
+          ? 'bg-rose-50/90 border-rose-300'
+          : alertLevel === 'ORANGE'
+          ? 'bg-orange-50/90 border-orange-300'
+          : alertLevel === 'YELLOW'
+          ? 'bg-amber-50/90 border-amber-300'
+          : 'bg-emerald-50/90 border-emerald-300'
+      }`}>
         <div className="flex items-start gap-4">
-          <div className="p-3.5 rounded-2xl bg-amber-100 text-amber-800 shrink-0">
+          <div className={`p-3.5 rounded-2xl shrink-0 ${
+            alertLevel === 'RED' ? 'bg-rose-100 text-rose-800' :
+            alertLevel === 'ORANGE' ? 'bg-orange-100 text-orange-800' :
+            alertLevel === 'YELLOW' ? 'bg-amber-100 text-amber-800' :
+            'bg-emerald-100 text-emerald-800'
+          }`}>
             <AlertTriangle className="w-7 h-7" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-lg sm:text-xl font-extrabold text-amber-950">
-                ⚠️ 2 Active Weather Alerts — Indore District
+              <h2 className="text-lg sm:text-xl font-extrabold text-slate-950">
+                ⚠️ {alertLevel} ALERT: Convective Rain Warning for {currentLocation.name}
               </h2>
             </div>
-            <p className="text-xs sm:text-sm text-amber-800 mt-1">
-              Live safety monitoring active for Western MP region.
+            <p className="text-xs sm:text-sm text-slate-700 mt-1">
+              Live physics AI telemetry active ({conformalCoverage}). Median rain: {p50} mm (Hazard ceiling: {p90} mm).
             </p>
           </div>
         </div>
 
         {/* 4 Stat Boxes */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full md:w-auto text-center shrink-0">
-          <div className="bg-white/80 backdrop-blur-xs p-2.5 rounded-xl border border-amber-200/60">
+          <div className="bg-white/80 backdrop-blur-xs p-2.5 rounded-xl border border-slate-200">
             <span className="text-[10px] font-bold text-slate-400 uppercase block">Active</span>
             <span className="text-sm font-extrabold text-slate-900 font-mono">2 Events</span>
           </div>
-          <div className="bg-white/80 backdrop-blur-xs p-2.5 rounded-xl border border-amber-200/60">
-            <span className="text-[10px] font-bold text-slate-400 uppercase block">Upcoming</span>
-            <span className="text-sm font-extrabold text-slate-900 font-mono">1 in 24h</span>
-          </div>
-          <div className="bg-white/80 backdrop-blur-xs p-2.5 rounded-xl border border-amber-200/60">
-            <span className="text-[10px] font-bold text-slate-400 uppercase block">Peak Severity</span>
-            <span className="text-xs font-bold text-amber-700 flex items-center justify-center gap-1 mt-0.5">
-              <span className="w-2 h-2 rounded-full bg-amber-500" />
-              Warning
+          <div className="bg-white/80 backdrop-blur-xs p-2.5 rounded-xl border border-slate-200">
+            <span className="text-[10px] font-bold text-slate-400 uppercase block">Confidence</span>
+            <span className="text-xs font-bold text-sky-700 font-mono mt-0.5 block truncate max-w-[80px]">
+              {conformalCoverage.split(' ')[0]}
             </span>
           </div>
-          <div className="bg-white/80 backdrop-blur-xs p-2.5 rounded-xl border border-amber-200/60">
+          <div className="bg-white/80 backdrop-blur-xs p-2.5 rounded-xl border border-slate-200">
+            <span className="text-[10px] font-bold text-slate-400 uppercase block">Peak Severity</span>
+            <span className={`text-xs font-bold flex items-center justify-center gap-1 mt-0.5 ${
+              alertLevel === 'RED' ? 'text-rose-700' :
+              alertLevel === 'ORANGE' ? 'text-orange-700' :
+              alertLevel === 'YELLOW' ? 'text-amber-700' :
+              'text-emerald-700'
+            }`}>
+              <span className={`w-2 h-2 rounded-full ${
+                alertLevel === 'RED' ? 'bg-rose-500' :
+                alertLevel === 'ORANGE' ? 'bg-orange-500' :
+                alertLevel === 'YELLOW' ? 'bg-amber-500' :
+                'bg-emerald-500'
+              }`} />
+              {alertLevel}
+            </span>
+          </div>
+          <div className="bg-white/80 backdrop-blur-xs p-2.5 rounded-xl border border-slate-200">
             <span className="text-[10px] font-bold text-slate-400 uppercase block">Expected Clear</span>
             <span className="text-sm font-extrabold text-slate-900 font-mono">9:00 PM</span>
           </div>

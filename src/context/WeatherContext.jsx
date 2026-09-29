@@ -49,43 +49,43 @@ export function WeatherProvider({ children }) {
   const [moesPayload, setMoesPayload] = useState({
     latitude: 22.7196,
     longitude: 75.8577,
-    climatic_zone: 5,
-    tp_gfs: 12.0,
-    tp_ecmwf: 14.5,
-    tp_ncum: 11.0,
-    tp_wrf: 16.0,
-    t2m_gfs: 28.0,
-    t2m_ecmwf: 27.5,
-    wind_gfs_kmh: 14.0,
-    wind_ecmwf_kmh: 16.0,
-    cape: 1200.0,
-    cin: 22.0,
-    rh_700: 62.0,
+    climatic_zone: 4,
+    tp_gfs: 14.5,
+    tp_ecmwf: 18.2,
+    tp_ncum: 22.0,
+    tp_wrf: 26.5,
+    t2m_gfs: 28.5,
+    t2m_ecmwf: 29.0,
+    wind_gfs_kmh: 16.0,
+    wind_ecmwf_kmh: 18.0,
+    cape: 1850.0,
+    cin: 35.0,
+    rh_700: 72.0,
     mslp: 1012.0,
-    wind_shear: 16.0,
+    wind_shear: 15.0,
     elevation_m: 553.0,
-    terrain_slope_deg: 4.5,
-    radar_max_dbz: 28.0,
-    satellite_ctt_celsius: -32.0
+    terrain_slope_deg: 3.5,
+    radar_max_dbz: 38.0,
+    satellite_ctt_celsius: -48.0
   });
 
   const [moesResult, setMoesResult] = useState({
     status: 'success',
     precipitation: {
-      quantiles_mm: { p10: 4.2, p50: 12.5, p90: 24.8 },
-      nwp_bust_probability: 0.28,
-      is_bust_warning: false,
+      quantiles_mm: { p10: 8.40, p50: 19.80, p90: 34.50 },
+      nwp_bust_probability: 0.428,
+      is_bust_warning: true,
       conformal_coverage: '86.75% Guaranteed',
-      alert: 'GREEN'
+      alert: 'ORANGE'
     },
     temperature: {
-      blended_2m_celsius: 28.0,
-      rothfusz_heat_index_celsius: 30.4,
+      blended_2m_celsius: 28.6,
+      rothfusz_heat_index_celsius: 31.2,
       heatwave_advisory: 'Normal'
     },
     wind: {
-      sustained_speed_kmh: 15.0,
-      gust_ceiling_p90_kmh: 24.0,
+      sustained_speed_kmh: 17.0,
+      gust_ceiling_p90_kmh: 26.4,
       gale_warning: false
     }
   });
