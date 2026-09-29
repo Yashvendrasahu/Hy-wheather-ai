@@ -20,7 +20,7 @@ export function AuthLoadingScreen() {
         <div className="w-1.5 h-1.5 rounded-full bg-sky-600 animate-ping" />
       </div>
       <p className="text-xs text-slate-400 mt-1 font-mono">
-        Securing session via Supabase Auth & PostgreSQL RLS
+        Securing session and authenticating workstation...
       </p>
     </div>
   );

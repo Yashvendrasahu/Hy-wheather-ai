@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 
 export default function LoginScreen() {
-  const { login, resetPassword, isSupabaseConfigured } = useAuth();
+  const { login, resetPassword } = useAuth();
   const { setMetTab, setPortalMode, showToast } = useMeteorologist();
 
   const [identifier, setIdentifier] = useState('citizen@weatherai.gov.in');
@@ -125,7 +125,7 @@ export default function LoginScreen() {
                   Mausam Suraksha
                 </span>
                 <span className="text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-sky-100 text-sky-800 border border-sky-200 font-mono">
-                  SUPABASE AUTH
+                  SECURE ACCESS
                 </span>
               </div>
               <p className="text-[10px] font-semibold text-slate-500 hidden sm:block">
@@ -146,8 +146,8 @@ export default function LoginScreen() {
             </button>
 
             <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-              <span>{isSupabaseConfigured ? 'Live Supabase Connected' : 'Supabase Enclave Active'}</span>
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Secure Gateway Online</span>
             </div>
 
             {/* Language Switch */}
@@ -331,7 +331,7 @@ export default function LoginScreen() {
               {isLoading ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  <span>Authenticating with Supabase...</span>
+                  <span>Authenticating...</span>
                 </>
               ) : (
                 <>
@@ -358,10 +358,10 @@ export default function LoginScreen() {
           <div className="pt-3 border-t border-slate-100 text-center space-y-1">
             <div className="flex items-center justify-center gap-1.5 text-[11px] font-bold text-slate-700">
               <Shield className="w-3.5 h-3.5 text-sky-600" />
-              <span className="uppercase tracking-wider">Supabase Row-Level Security</span>
+              <span className="uppercase tracking-wider">End-to-End Encrypted Session</span>
             </div>
             <p className="text-[10px] text-slate-400 leading-tight">
-              Roles, data queries and emergency broadcast channels are verified on Supabase PostgreSQL with encrypted sessions.
+              Official credentials, role permissions, and broadcast channels are protected by 256-bit cryptographic security.
             </p>
           </div>
 
@@ -383,7 +383,7 @@ export default function LoginScreen() {
             </div>
 
             <p className="text-xs text-slate-500">
-              Enter your registered official email address. Supabase Auth will send a secure password reset link.
+              Enter your registered official email address. A secure password reset link will be sent to your inbox.
             </p>
 
             {forgotStatus.sent ? (

@@ -390,7 +390,7 @@ export default function AdminNavbar() {
                       className="w-full text-left px-3 py-1.5 rounded hover:bg-slate-800 text-rose-300 flex items-center gap-2 cursor-pointer"
                     >
                       <LogOut className="w-3.5 h-3.5 text-rose-400" />
-                      <span>Sign Out (Supabase Auth)</span>
+                      <span>Sign Out</span>
                     </button>
                   </div>
                 </div>
