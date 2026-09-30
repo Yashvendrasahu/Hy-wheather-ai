@@ -1,0 +1,6 @@
+{
+  "name": "WeatherAI - Microclimate & Doppler Forecast Platform",
+  "description": "Hybrid AI + NWP precision atmospheric forecasts blending global numerical models with local micro-climate intelligence.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
