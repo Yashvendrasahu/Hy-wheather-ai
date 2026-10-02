@@ -28,7 +28,8 @@ import {
   CloudRain,
   Activity,
   Layers,
-  Zap
+  Zap,
+  Info
 } from 'lucide-react';
 
 export default function DMAAlertsActionsScreen() {
@@ -68,12 +69,17 @@ export default function DMAAlertsActionsScreen() {
   const [advisoryLang, setAdvisoryLang] = useState('EN');
   const [isConfirmingDispatch, setIsConfirmingDispatch] = useState(false);
   const [advisoryTextEn, setAdvisoryTextEn] = useState(
-    `Urgent Weather Advisory for Indore Urban & Low-Lying Catchments: Heavy rain spells expected between 4:00 PM and 7:00 PM. Citizens are advised to avoid waterlogged underpasses, stay indoors during peak downpour, and dial 112 / 1077 for emergency assistance. SDRF units have been positioned.`
+    `Urgent Weather Advisory for Indore Urban & Low-Lying Catchments: Heavy rain spells expected between 4:00 PM and 7:00 PM. Citizens are advised to avoid waterlogged underpasses, stay indoors during peak rainfall and coordinate with local civic disaster response teams. Follow official updates for road closures, drainage blockage alerts, and shelter operations in vulnerable neighborhoods.`
   );
 
   const [advisoryTextHi, setAdvisoryTextHi] = useState(
-    `इंदौर शहरी और निचले जलभराव क्षेत्रों के लिए आवश्यक मौसम परामर्श: शाम 4:00 से 7:00 बजे के बीच भारी बारिश की संभावना है। नागरिकों से अनुरोध है कि जलभराव वाले अंडरपास से बचें, घर के अंदर रहें और 112 / 1077 पर संपर्क करें।`
+    `इंदौर शहरी और निचले जलभराव क्षेत्रों के लिए आवश्यक मौसम परामर्श: शाम 4:00 से 7:00 बजे के बीच भारी बारिश की संभावना है। नागरिकों को जलभराव वाले अंडरपास से बचने, चरम बारिश के दौरान घर के अंदर रहने, और स्थानीय नागरिक आपदा प्रतिक्रिया टीमों से समन्वय बनाए रखने की सलाह दी जाती है। संवेदनशील क्षेत्रों में सड़क बंदी, जल निकासी बाधा, और आश्रय संचालन से संबंधित आधिकारिक अपडेट्स का पालन करें।`
   );
+
+  const selectedSectorName = selectedSector?.name || 'Indore District';
+  const selectedSectorSubdivision = selectedSector?.subdivision || 'Zone MP-04';
+  const selectedSectorTiming = selectedSector?.timing || 'Today (IST)';
+  const officerName = officerUser?.name || 'State EOC';
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -319,7 +325,7 @@ export default function DMAAlertsActionsScreen() {
                     key={alert.id}
                     onClick={() => setSelectedAlertId(alert.id)}
                     className={`hover:bg-slate-50/80 transition-colors cursor-pointer ${
-                      selectedAlert.id === alert.id ? 'bg-sky-50/60 font-bold border-l-4 border-l-sky-600' : ''
+                      selectedAlert?.id === alert.id ? 'bg-sky-50/60 font-bold border-l-4 border-l-sky-600' : ''
                     }`}
                   >
                     <td className="py-3 px-3">
@@ -382,8 +388,8 @@ export default function DMAAlertsActionsScreen() {
 
             <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200">
               <span className="text-[10px] text-slate-400 uppercase">LOCATION</span>
-              <div className="text-sm font-black text-slate-900 mt-0.5">{selectedSector.name}</div>
-              <div className="text-[10px] text-slate-500 font-semibold">{selectedSector.subdivision}</div>
+              <div className="text-sm font-black text-slate-900 mt-0.5">{selectedSectorName}</div>
+              <div className="text-[10px] text-slate-500 font-semibold">{selectedSectorSubdivision}</div>
             </div>
 
             <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200">
@@ -396,7 +402,7 @@ export default function DMAAlertsActionsScreen() {
 
             <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200">
               <span className="text-[10px] text-slate-400 uppercase">TIMING</span>
-              <div className="text-sm font-black text-slate-900 mt-0.5">{selectedSector.timing}</div>
+              <div className="text-sm font-black text-slate-900 mt-0.5">{selectedSectorTiming}</div>
               <div className="text-[10px] text-slate-500 font-semibold">Today (IST)</div>
             </div>
           </div>
@@ -588,7 +594,7 @@ export default function DMAAlertsActionsScreen() {
               </h3>
             </div>
             <span className="px-2 py-0.2 rounded bg-rose-50 text-rose-700 font-mono text-[10px] font-extrabold border border-rose-200 uppercase">
-              {selectedSector.name.toUpperCase()}
+              {selectedSectorName.toUpperCase()}
             </span>
           </div>
 
@@ -599,7 +605,7 @@ export default function DMAAlertsActionsScreen() {
           <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 text-xs font-semibold">
             <div className="flex justify-between pb-1 border-b border-slate-200">
               <span className="text-slate-500">Target Recipients:</span>
-              <strong className="text-slate-900">{selectedSector.name} Collectorate & Municipal EOC</strong>
+              <strong className="text-slate-900">{selectedSectorName} Collectorate & Municipal EOC</strong>
             </div>
             <div className="flex justify-between pb-1 border-b border-slate-200">
               <span className="text-slate-500">Mandated Dispatch Code:</span>
@@ -617,7 +623,7 @@ export default function DMAAlertsActionsScreen() {
             </div>
             <div className="flex justify-between">
               <span className="text-slate-500">Authorizing Officer:</span>
-              <strong className="text-slate-900">{officerUser.name} (State EOC)</strong>
+              <strong className="text-slate-900">{officerName} (State EOC)</strong>
             </div>
           </div>
 
@@ -689,14 +695,14 @@ export default function DMAAlertsActionsScreen() {
                 rows={4}
                 value={advisoryTextEn}
                 onChange={(e) => setAdvisoryTextEn(e.target.value)}
-                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-medium text-slate-800 leading-relaxed focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-medium text-slate-800 leading-relaxed focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/20"
               />
             ) : (
               <textarea
                 rows={4}
                 value={advisoryTextHi}
                 onChange={(e) => setAdvisoryTextHi(e.target.value)}
-                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-medium text-slate-800 leading-relaxed focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-medium text-slate-800 leading-relaxed focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/20"
               />
             )}
           </div>
