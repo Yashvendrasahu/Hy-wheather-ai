@@ -18,6 +18,8 @@
 WEATHER FUSE is a state-of-the-art atmospheric intelligence web platform designed to bridge high-resolution global numerical weather prediction models (ECMWF, GFS, WRF) with localized micro-grid AI neural physics emulations and real-time ground AWS (Automated Weather Station) sensor meshes.
 Whether tracking rapid convective squall lines, assessing agricultural soil moisture gradients, or broadcasting critical Common Alerting Protocol (CAP) civil protection alerts, WEATHER FUSE provides sub-hourly resolution forecasting and decisive emergency operations support.
 ---
+
+
 🌟 Key Features
 1. 🌤️ Citizen Public Weather Portal
 Hyper-Local Real-Time Telemetry: Instant temperature, dew point, relative humidity, barometric pressure trend, and wind velocity vectors.
@@ -27,23 +29,31 @@ Air Quality (AQI) & Environmental Index: Real-time PM2.5, PM10, Ozone, NO₂, SO
 Agricultural & Livestock Weather Advisory: Soil volumetric water content, evapo-transpiration rates, and localized crop protection advisories.
 GPS Location Detection & Search: Instant synoptic data retrieval across all districts, cities, and global micro-coordinates.
 ---
+
+
 2. 🔬 Professional Meteorologist Synoptic Desk
 Multi-Model NWP Intercomparison: Side-by-side analysis of ECMWF IFS (9km), GFS (13km), WRF High-Res (1.2km), and Deep QRNN AI Attention models.
 Atmospheric Sounding & Skew-T Emulation: Convective Available Potential Energy (CAPE), Lifted Index (LI), storm-relative helicity, and boundary layer shear.
 Radar & Satellite Ingest Controls: Real-time reflectivity calibration, Doppler radial velocity, and cloud-top brightness temperature tracking.
 Official Bulletin Drafting & Verification: Standardized meteorological bulletin creation and multi-channel dissemination.
 ---
+
+
 3. 🚨 Disaster Management Authority (DMA) Civic EOC
 Emergency Operations Center (EOC) Cockpit: Active multi-hazard monitoring (Flash Floods, Cyclones, Heatwaves, Severe Squalls).
 CAP Standardized Alert Broadcasts: 1-click issuance of Level-1 to Level-4 civil alerts to sirens, SMS gateways, and citizen apps.
 Shelter & Evacuation Grid Management: Real-time capacity, inventory, logistics tracking, and emergency transit route status.
 Incident Response Dispatch: Field team coordination, disaster liaison hotline, and inter-agency resource management.
 ---
+
+
 4. 🛡️ GovCloud Cyber Admin Enclave
 Real-Time Data Pipeline Monitor: Ingestion telemetry from AWS ground stations, radar feeds, and satellite transponders.
 User Verification & RBAC Governance: Role-based access control with 2FA / OTP verification enclaves.
 AI Deep QRNN Model Diagnostics: Accuracy scoring, inference latency, parameter weights, and automated failover monitoring.
 ---
+
+
 🛠️ Tech Stack
 Layer	Technologies
 Frontend Framework	React (JavaScript / JSX), Vite
@@ -53,6 +63,8 @@ Interactive Mapping	Leaflet.js, OpenStreetMap Carto Tiles, Weather Radar Layer O
 State Management	Modular React Context API (`AuthContext`, `WeatherContext`, `MeteorologistContext`)
 Weather APIs & Telemetry	MoES Synoptic Engine, Open-Meteo High-Res API, Browser Geolocation API
 ---
+
+
 📁 Project Structure
 ```
 ├── public/
@@ -82,6 +94,8 @@ Weather APIs & Telemetry	MoES Synoptic Engine, Open-Meteo High-Res API, Browser 
 ├── vite.config.ts              # Vite configuration
 └── README.md                   # Project Documentation
 ```
+
+
 ---
 🚀 Getting Started
 Prerequisites
@@ -101,16 +115,25 @@ Start the development server:
 ```bash
    npm run dev
    ```
+
+
 Open in browser:
 Navigate to `http://localhost:3000` (or `http://localhost:5173`).
 ---
+
+
 👥 Portals & Roles
 Role	Access Route	Key Capabilities
 Citizen (Public)	Default Home View	Live weather, 10-day forecast, air quality, radar, storm warnings.
 Meteorologist	Sign In / Met Portal	Soundings, ECMWF/GFS NWP models, official bulletin release.
 Disaster Authority (DMA)	DMA EOC Portal	Hazard map, shelter allocation, CAP emergency broadcast trigger.
 Administrator	Admin Console	Server pipeline health, user verification, system audit logs.
+
+youtube demo link :
+https://youtu.be/FKY0YRavM88
 ---
+
+
 🔒 Security & Privacy
 Real-time Ephemeral Telemetry: User coordinates are processed strictly in real-time to compute localized 1km² micro-grid atmospheric forecasts and never transferred to commercial advertising trackers.
 Two-Factor Authentication: Sensitive operational desks (Meteorologist, DMA, Cyber Admin) utilize 2FA verification code flows.
